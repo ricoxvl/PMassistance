@@ -5,7 +5,7 @@ import plotly.express as px
 
 def show_dashboard(results):
 
-    st.write(results)
+    #st.write(results)
 
     # =====================================================
     # Custom CSS
