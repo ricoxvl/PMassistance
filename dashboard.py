@@ -5,6 +5,8 @@ import plotly.express as px
 
 def show_dashboard(results):
 
+    st.write(results)
+
     # =====================================================
     # Custom CSS
     # =====================================================
@@ -13,61 +15,61 @@ def show_dashboard(results):
     <style>
 
     .stApp{
-    background:#F6F8FB;
+        background:#F6F8FB;
     }
 
     .kpi-card{
-    background:white;
-    border-left:6px solid #005A9C;
-    border-radius:14px;
-    padding:22px;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
+        background:white;
+        border-left:6px solid #005A9C;
+        border-radius:14px;
+        padding:22px;
+        box-shadow:0 4px 12px rgba(0,0,0,.08);
     }
 
     .kpi-title{
-    font-size:15px;
-    color:#64748B;
-    font-weight:600;
+        font-size:15px;
+        color:#64748B;
+        font-weight:600;
     }
 
     .kpi-number{
-    font-size:40px;
-    font-weight:700;
-    color:#003B6F;
+        font-size:40px;
+        font-weight:700;
+        color:#003B6F;
     }
 
     .kpi-trend{
-    color:#059669;
-    font-size:13px;
-    margin-top:8px;
+        color:#059669;
+        font-size:13px;
+        margin-top:8px;
     }
 
     .priority-card{
-    background:white;
-    border-radius:10px;
-    padding:16px;
-    margin-bottom:12px;
-    box-shadow:0 2px 8px rgba(0,0,0,.08);
+        background:white;
+        border-radius:10px;
+        padding:16px;
+        margin-bottom:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.08);
     }
 
     .high{
-    border-left:6px solid #DC2626;
+        border-left:6px solid #DC2626;
     }
 
     .medium{
-    border-left:6px solid #F59E0B;
+        border-left:6px solid #F59E0B;
     }
 
     .low{
-    border-left:6px solid #16A34A;
+        border-left:6px solid #16A34A;
     }
 
     .risk-card{
-    background:#FFF7ED;
-    border-left:6px solid #EA580C;
-    border-radius:10px;
-    padding:18px;
-    margin-bottom:12px;
+        background:#FFF7ED;
+        border-left:6px solid #EA580C;
+        border-radius:10px;
+        padding:18px;
+        margin-bottom:12px;
     }
 
     </style>
@@ -77,10 +79,21 @@ def show_dashboard(results):
     # Data
     # =====================================================
 
-    categories = results.get("categories", {}).get("categories", [])
-    priorities = results.get("priorities", {}).get("priorities", [])
-    roadmap = results.get("roadmap", {}).get("roadmap", [])
-    sentiments = results.get("sentiment", {}).get("sentiments", [])
+    categories = results.get("categories", [])
+    if isinstance(categories, dict):
+        categories = categories.get("categories", [])
+
+    priorities = results.get("priorities", [])
+    if isinstance(priorities, dict):
+        priorities = priorities.get("priorities", [])
+
+    roadmap = results.get("roadmap", [])
+    if isinstance(roadmap, dict):
+        roadmap = roadmap.get("roadmap", [])
+
+    sentiments = results.get("sentiment", [])
+    if isinstance(sentiments, dict):
+        sentiments = sentiments.get("sentiments", [])
 
     category_df = pd.DataFrame(categories)
     sentiment_df = pd.DataFrame(sentiments)
