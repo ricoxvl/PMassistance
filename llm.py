@@ -16,11 +16,31 @@ MODEL = "llama-3.1-8b-instant"
 def ask_json(prompt):
     content = ""
 
+    system_prompt = """
+You are a JSON generator.
+
+Return ONLY valid JSON.
+
+Rules:
+- Output must be valid JSON.
+- Do not include markdown.
+- Do not include ```json.
+- Do not explain anything.
+- Every property name MUST be enclosed in double quotes.
+- Every array must be properly closed.
+- Never omit quotation marks around keys.
+"""
+
     try:
         response = client.chat.completions.create(
             model=MODEL,
+            temperature=0,
             response_format={"type": "json_object"},
             messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
                 {
                     "role": "user",
                     "content": prompt
@@ -30,40 +50,16 @@ def ask_json(prompt):
 
         content = response.choices[0].message.content
 
-        print("\n========== JSON ==========")
-        print(content)
-        print("==========================\n")
-
         return json.loads(content)
 
     except json.JSONDecodeError:
         st.error("The AI returned invalid JSON.")
-        if content:
-            st.code(content)
+        st.code(content)
         return {}
 
     except Exception as e:
         st.error(f"Groq API Error: {e}")
         return {}
-
-
-def ask_text(prompt):
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        return response.choices[0].message.content
-
-    except Exception as e:
-        st.error(f"Groq API Error: {e}")
-        return ""
 
 # -----------------------------
 # Step 1
