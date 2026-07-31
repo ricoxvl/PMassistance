@@ -94,7 +94,12 @@ def show_dashboard(results):
     sentiments = results.get("sentiment", [])
     if isinstance(sentiments, dict):
         sentiments = sentiments.get("sentiments", [])
-
+    has_customer_analysis = (
+        len(categories) > 0 or
+        len(priorities) > 0 or
+        len(roadmap) > 0 or
+        len(sentiments) > 0
+)
     category_df = pd.DataFrame(categories)
     sentiment_df = pd.DataFrame(sentiments)
 
@@ -124,182 +129,165 @@ def show_dashboard(results):
     st.caption("AI-generated overview of customer feedback analysis.")
 
     # =====================================================
-    # KPI Cards
+    # Customer Feedback Dashboard
     # =====================================================
-    total_priorities = high + medium + low
 
-    high_pct = (high / total_priorities * 100) if total_priorities else 0
-    medium_pct = (medium / total_priorities * 100) if total_priorities else 0
-    low_pct = (low / total_priorities * 100) if total_priorities else 0
-    
-    def kpi_card(title, value, subtitle):
-        st.markdown(
-            f"""
+    if has_customer_analysis:
+
+        # ---------------- KPI Cards ----------------
+
+        total_priorities = high + medium + low
+
+        high_pct = (high / total_priorities * 100) if total_priorities else 0
+        medium_pct = (medium / total_priorities * 100) if total_priorities else 0
+        low_pct = (low / total_priorities * 100) if total_priorities else 0
+
+        def kpi_card(title, value, subtitle):
+            st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-title">{title}</div>
                 <div class="kpi-number">{value}</div>
                 <div class="kpi-trend">{subtitle}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-    c1, c2, c3, c4 = st.columns(4)
-
-    cards = [
-        ("📂 Categories", len(category_df), f"{len(category_df)} active themes"),
-        ("🔥 High Priority", high, f"{high_pct:.0f}% of all priorities"),
-        ("🟡 Medium Priority", medium, f"{medium_pct:.0f}% of all priorities"),
-        ("🟢 Low Priority", low, f"{low_pct:.0f}% of all priorities"),
-    ]
-    for col, (title, value, subtitle) in zip([c1, c2, c3, c4], cards):
-        with col:
-            kpi_card(title, value, subtitle)
-
-
-
-    st.divider()
-
-    # =====================================================
-    # Charts
-    # =====================================================
-
-    left, right = st.columns([2, 1])
-
-    with left:
-
-        st.subheader("Customer Feedback Categories")
-
-        if not category_df.empty:
-
-            fig = px.bar(
-                category_df,
-                x="count",
-                y="category",
-                orientation="h",
-                text="count",
-                color="count",
-                color_continuous_scale="Blues"
-            )
-
-            fig.update_layout(
-                height=420,
-                xaxis_title="Feedback Count",
-                yaxis_title="",
-                coloraxis_showscale=False,
-                margin=dict(l=20, r=20, t=30, b=20)
-            )
-
-            fig.update_traces(textposition="outside")
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-        else:
-            st.info("No categories available.")
-
-    with right:
-
-        st.subheader("Sentiment Distribution")
-
-        if not sentiment_df.empty:
-
-            sentiment_counts = (
-                sentiment_df["sentiment"]
-                .value_counts()
-                .reset_index()
-            )
-
-            sentiment_counts.columns = [
-                "Sentiment",
-                "Count"
-            ]
-
-            donut = px.pie(
-                sentiment_counts,
-                names="Sentiment",
-                values="Count",
-                hole=.65,
-                color="Sentiment",
-                color_discrete_map={
-                    "Positive": "#22C55E",
-                    "Neutral": "#FACC15",
-                    "Negative": "#EF4444"
-                }
-            )
-
-            donut.update_layout(
-                showlegend=True,
-                margin=dict(l=10, r=10, t=20, b=20)
-            )
-
-            st.plotly_chart(
-                donut,
-                use_container_width=True
-            )
-
-        else:
-            st.info("No sentiment data.")
-
-    st.divider()
-
-    # =====================================================
-    # Top Priorities
-    # =====================================================
-
-    st.subheader("Top Product Priorities")
-
-    if priorities:
-        for item in priorities:
-            priority = item.get("priority", "").lower()
-            issue = item.get("issue", "Unknown")
-
-            st.markdown(f"""
-            <div class="priority-card {priority}">
-                <b>{issue}</b><br>
-                <span style="color:#64748B;">
-                    Priority: {priority.title()}
-                </span>
-            </div>
             """, unsafe_allow_html=True)
 
+        c1, c2, c3, c4 = st.columns(4)
+
+        cards = [
+            ("📂 Categories", len(category_df), f"{len(category_df)} active themes"),
+            ("🔥 High Priority", high, f"{high_pct:.0f}% of all priorities"),
+            ("🟡 Medium Priority", medium, f"{medium_pct:.0f}% of all priorities"),
+            ("🟢 Low Priority", low, f"{low_pct:.0f}% of all priorities"),
+        ]
+
+        for col, (title, value, subtitle) in zip([c1, c2, c3, c4], cards):
+            with col:
+                kpi_card(title, value, subtitle)
+
+        st.divider()
+
+        # ---------------- Categories & Sentiment ----------------
+
+        left, right = st.columns([2, 1])
+
+        with left:
+
+            st.subheader("Customer Feedback Categories")
+
+            if not category_df.empty:
+
+                fig = px.bar(
+                    category_df,
+                    x="count",
+                    y="category",
+                    orientation="h",
+                    text="count",
+                    color="count",
+                    color_continuous_scale="Blues"
+                )
+
+                fig.update_layout(
+                    height=420,
+                    xaxis_title="Feedback Count",
+                    yaxis_title="",
+                    coloraxis_showscale=False,
+                    margin=dict(l=20, r=20, t=30, b=20)
+                )
+
+                fig.update_traces(textposition="outside")
+                st.plotly_chart(fig, use_container_width=True)
+
+            else:
+                st.info("No categories available.")
+
+        with right:
+
+            st.subheader("Sentiment Distribution")
+
+            if not sentiment_df.empty:
+
+                sentiment_counts = (
+                    sentiment_df["sentiment"]
+                    .value_counts()
+                    .reset_index()
+                )
+
+                sentiment_counts.columns = ["Sentiment", "Count"]
+
+                donut = px.pie(
+                    sentiment_counts,
+                    names="Sentiment",
+                    values="Count",
+                    hole=.65,
+                    color="Sentiment",
+                    color_discrete_map={
+                        "Positive": "#22C55E",
+                        "Neutral": "#FACC15",
+                        "Negative": "#EF4444"
+                    }
+                )
+
+                donut.update_layout(
+                    showlegend=True,
+                    margin=dict(l=10, r=10, t=20, b=20)
+                )
+
+                st.plotly_chart(donut, use_container_width=True)
+
+            else:
+                st.info("No sentiment data.")
+
+        st.divider()
+
+        # ---------------- Top Priorities ----------------
+
+        st.subheader("Top Product Priorities")
+
+        if priorities:
+
+            for item in priorities:
+                priority = item.get("priority", "").lower()
+                issue = item.get("issue", "Unknown")
+
+                st.markdown(f"""
+                <div class="priority-card {priority}">
+                    <b>{issue}</b><br>
+                    <span style="color:#64748B;">
+                        Priority: {priority.title()}
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        else:
+            st.info("No priorities available.")
+
+        st.divider()
+
+        # ---------------- Roadmap ----------------
+
+        st.subheader("Three-Sprint Roadmap")
+
+        if roadmap:
+
+            c1, c2, c3 = st.columns(3)
+
+            for col, sprint in zip([c1, c2, c3], roadmap):
+
+                if not isinstance(sprint, dict):
+                    continue
+
+                with col:
+                    with st.container(border=True):
+                        st.markdown(f"### {sprint.get('sprint', 'Sprint')}")
+                        st.write(sprint.get("goal", "No goal available."))
+
+        else:
+            st.info("No roadmap available.")
+
+        st.divider()
+
     else:
-        st.info("No priorities available.")
-
-    st.divider()
-
-    # =====================================================
-    # Roadmap
-    # =====================================================
-
-    st.subheader("Three-Sprint Roadmap")
-
-    c1, c2, c3 = st.columns(3)
-
-    cols = [c1, c2, c3]
-
-    for col, sprint in zip(cols, roadmap):
-
-        if not isinstance(sprint, dict):
-            continue
-
-        with col:
-
-            with st.container(border=True):
-
-                st.markdown(
-                    f"### {sprint.get('sprint', 'Sprint')}"
-                )
-
-                st.write(
-                    sprint.get(
-                        "goal",
-                        "No goal available."
-                    )
-                )
-
-    st.divider()
+        st.info("No customer feedback analysis available.")
 
     # =====================================================
     # Competitive Analysis

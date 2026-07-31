@@ -189,6 +189,7 @@ if st.button("🚀 Analyze", type="primary"):
                 )
 
             st.session_state["analysis"] = results
+            st.session_state["analysis_mode"] = analysis_mode
             st.success("✅ Analysis Complete!")
 
         except Exception as e:
@@ -200,27 +201,37 @@ if st.button("🚀 Analyze", type="primary"):
 if "analysis" in st.session_state:
 
     results = st.session_state["analysis"]
+    mode = st.session_state.get("analysis_mode", "Customer Feedback")
 
     st.divider()
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        " Dashboard",
-        " Analytics",
-        " Sentiment",
-        " Jira Stories"
-    ])
+    if mode == "Competitive Analysis":
 
-    with tab1:
-        show_dashboard(results)
+        tab1 = st.tabs(["Dashboard"])[0]
 
-    with tab2:
-        show_charts(results)
+        with tab1:
+            show_dashboard(results)
 
-    with tab3:
-        show_sentiment(results)
+    else:
 
-    with tab4:
-        show_jira(results)
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "Dashboard",
+            "Analytics",
+            "Sentiment",
+            "Jira Stories"
+        ])
+
+        with tab1:
+            show_dashboard(results)
+
+        with tab2:
+            show_charts(results)
+
+        with tab3:
+            show_sentiment(results)
+
+        with tab4:
+            show_jira(results)
 
     # ------------------------------------------------
     # AI Product Copilot
@@ -228,7 +239,7 @@ if "analysis" in st.session_state:
 
     st.divider()
 
-    st.header(" AI Product Copilot")
+    st.header("🤖 AI Product Copilot")
 
     st.caption(
         "Ask questions about your analysis, priorities, roadmap, sentiment, or customer feedback."
