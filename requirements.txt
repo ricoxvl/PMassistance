@@ -1,9 +1,10 @@
 streamlit
 pandas
 plotly
+matplotlib
 reportlab
 groq
-matplotlib
 python-dotenv
 PyMuPDF
 python-docx
+openpyxl
