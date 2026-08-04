@@ -13,13 +13,21 @@ def run_competitive_analysis(competitor_text):
     """
     Competitive analysis only.
     """
+
+    analysis = competitive_analysis([], competitor_text)
+
     return {
-        "executive_summary": "Competitive analysis completed successfully.",
+        "executive_summary": analysis.get(
+            "executive_summary",
+            "No executive summary available."
+        ),
         "themes": [],
+        "categories": [],
+        "priorities": [],
         "sentiment": {},
         "roadmap": [],
         "jira_stories": [],
-        "competitive_analysis": competitive_analysis([], competitor_text)
+        "competitive_analysis": analysis
     }
 
 

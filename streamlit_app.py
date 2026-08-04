@@ -3,7 +3,8 @@ import pandas as pd
 
 from copilot import ask_copilot
 from pdf_report import create_pdf
-from dashboard import show_dashboard
+from dashboard_customer import show_customer_dashboard
+from dashboard_competitive import show_competitive_dashboard
 from charts import show_charts
 from sentiment import show_sentiment
 from jira import show_jira
@@ -15,11 +16,11 @@ from analysis_modes import (
 )
 
 st.set_page_config(
-    page_title="AI Product Feedback Analyzer",
+    page_title="Product Intelligence AI",
     page_icon="",
     layout="wide"
 )
-st.sidebar.title("Controls")
+st.sidebar.title("⚙️ Analysis Controls")
 analysis_mode = st.sidebar.radio(
     "Analysis Mode",
     [
@@ -42,9 +43,9 @@ with col1:
         pass
 
 with col2:
-    st.title("AI Product Feedback Analyzer")
+    st.title("Product Intelligence AI")
     st.caption(
-        "AI-powered Product Management Dashboard for Customer Feedback Analysis"
+        "Executive AI platform for customer feedback, competitive intelligence, and product strategy."
     )
 
 st.divider()
@@ -54,13 +55,13 @@ st.divider()
 # ----------------------------------------------------
 
 feedback_file = st.file_uploader(
-    "Upload Customer Feedback CSV",
+    "Customer Feedback Dataset",
     type=["csv"],
     key="feedback"
 )
 
 competitor_file = st.file_uploader(
-    "Upload Competitive Analysis (XLSX, XLS, PDF, DOCX, TXT)",
+    "Competitive Intelligence Report (XLSX, XLS, PDF, DOCX, TXT)",
     type=["xlsx", "xls", "pdf", "docx", "txt"],
     key="competitor"
 )
@@ -153,7 +154,7 @@ if feedback_file is not None:
 
 if st.button("🚀 Analyze", type="primary"):
 
-    with st.spinner("Generating executive insights..."):
+    with st.spinner("🤖 AI is analyzing customer feedback and generating executive insights..."):
 
         try:
 
@@ -205,24 +206,14 @@ if "analysis" in st.session_state:
 
     st.divider()
 
-    if mode == "Competitive Analysis":
+    if mode == "Customer Feedback":
+        show_customer_dashboard(results)
 
-        tab1 = st.tabs(["Dashboard"])[0]
+    elif mode == "Competitive Analysis":
+        show_competitive_dashboard(results)
 
-        with tab1:
-            show_dashboard(results)
-
-    else:
-
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "Dashboard",
-            "Analytics",
-            "Sentiment",
-            "Jira Stories"
-        ])
-
-        with tab1:
-            show_dashboard(results)
+    elif mode == "Combined Analysis":
+        show_combined_dashboard(results)
 
         with tab2:
             show_charts(results)
@@ -242,7 +233,7 @@ if "analysis" in st.session_state:
     st.header("🤖 AI Product Copilot")
 
     st.caption(
-        "Ask questions about your analysis, priorities, roadmap, sentiment, or customer feedback."
+        "Ask questions about customer insights, product strategy, competitive intelligence, roadmap planning, and business priorities."
     )
 
     if "chat_history" not in st.session_state:
@@ -284,11 +275,11 @@ if "analysis" in st.session_state:
 
     st.divider()
 
-    st.header("📄 Analyzed Report")
+    st.header("📄 Executive Report")
 
     st.caption(
-        "Generate a professional PDF containing your analysis."
-    )
+        "Download a professionally formatted executive report."
+    )   
 
     if st.button("Generate PDF"):
 
@@ -310,5 +301,5 @@ if "analysis" in st.session_state:
 st.divider()
 
 st.caption(
-    "AI Product Feedback Analyzer • Version 12 • Powered by Groq • Llama 3.1 • Streamlit"
+    "Product Intelligence AI • Executive Analytics Dashboard • Powered by Streamlit, Groq & Llama 3.1"
 )
