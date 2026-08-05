@@ -5,6 +5,7 @@
 An AI-powered product intelligence platform that transforms customer feedback and competitor reports into actionable business insights. The application leverages Large Language Models (LLMs) to analyze customer sentiment, identify product opportunities, benchmark competitors, and generate executive recommendations through interactive dashboards.
 
 ---
+**Note**: This repository contains a demonstration version of an AI-powered product intelligence platform. All sample data has been anonymized or replaced with synthetic examples. No proprietary or confidential company information is included.
 
 # Overview
 
