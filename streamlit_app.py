@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from copilot import ask_copilot
+from dashboard_combined import show_combined_dashboard
 from pdf_report import create_pdf
 from dashboard_customer import show_customer_dashboard
 from dashboard_competitive import show_competitive_dashboard
@@ -9,24 +10,20 @@ from charts import show_charts
 from sentiment import show_sentiment
 from jira import show_jira
 from document_processor import extract_competitor_text
-from analysis_modes import (
-    run_customer_analysis,
-    run_competitive_analysis,
-    run_combined_analysis
-)
+from workflow import run_workflow
 
 st.set_page_config(
     page_title="Product Intelligence AI",
     page_icon="",
     layout="wide"
 )
-st.sidebar.title("⚙️ Analysis Controls")
+st.sidebar.title("Analysis Type")
 analysis_mode = st.sidebar.radio(
     "Analysis Mode",
     [
-        "Customer Feedback",
-        "Competitive Analysis",
-        "Combined Analysis"
+        "Customer Insights",
+        "Competitive Intelligence",
+        "Executive Analysis (Combined)"
     ]
 )
 
@@ -56,7 +53,7 @@ st.divider()
 
 feedback_file = st.file_uploader(
     "Customer Feedback Dataset",
-    type=["csv"],
+    type=["csv", "xlsx", "xls"],
     key="feedback"
 )
 
@@ -105,7 +102,10 @@ if competitor_file is not None:
 
 if feedback_file is not None:
 
-    df = pd.read_csv(feedback_file)
+    if feedback_file.name.endswith(".csv"):
+        df = pd.read_csv(feedback_file)
+    else:
+        df = pd.read_excel(feedback_file)
 
     st.subheader("Customer Feedback")
 
@@ -154,25 +154,32 @@ if feedback_file is not None:
 
 if st.button("🚀 Analyze", type="primary"):
 
-    with st.spinner("🤖 AI is analyzing customer feedback and generating executive insights..."):
+    with st.spinner("AI is analyzing customer feedback and generating executive insights..."):
 
         try:
 
-            if analysis_mode == "Customer Feedback":
+            if analysis_mode == "Customer Insights":
 
                 if not feedback_list:
                     st.error("Please upload a customer feedback CSV.")
                     st.stop()
 
-                results = run_customer_analysis(feedback_list)
+                results = run_workflow(
+                    feedback_list
+                )
 
-            elif analysis_mode == "Competitive Analysis":
+            elif analysis_mode == "Competitive Intelligence":
 
                 if not competitor_text:
-                    st.error("Please upload a competitive analysis document.")
+                    st.error("Please upload a competitor document.")
                     st.stop()
 
-                results = run_competitive_analysis(competitor_text)
+                results = {
+                    "competitive_analysis": run_workflow(
+                        [],
+                        competitor_text
+                    )["competitive_analysis"]
+                }
 
             else:
 
@@ -181,47 +188,55 @@ if st.button("🚀 Analyze", type="primary"):
                     st.stop()
 
                 if not competitor_text:
-                    st.error("Please upload a competitive analysis document.")
+                    st.error("Please upload a competitor document.")
                     st.stop()
 
-                results = run_combined_analysis(
+                results = run_workflow(
                     feedback_list,
                     competitor_text
                 )
 
             st.session_state["analysis"] = results
             st.session_state["analysis_mode"] = analysis_mode
+
             st.success("✅ Analysis Complete!")
 
         except Exception as e:
+
             st.error(f"Workflow Failed:\n\n{e}")
 # ----------------------------------------------------
 # Dashboard
 # ----------------------------------------------------
+    if "analysis" in st.session_state:
 
-if "analysis" in st.session_state:
+        results = st.session_state["analysis"]
+        mode = st.session_state.get("analysis_mode", "Customer Insights")
 
-    results = st.session_state["analysis"]
-    mode = st.session_state.get("analysis_mode", "Customer Feedback")
+        overview_tab, analytics_tab, roadmap_tab, ai_tab = st.tabs([
+            "Executive",
+            "Analytics",
+            "Roadmap",
+            "AI Insights"
+        ])
 
-    st.divider()
+        with overview_tab:
 
-    if mode == "Customer Feedback":
-        show_customer_dashboard(results)
+            if mode == "Customer Insights":
+                show_customer_dashboard(results)
 
-    elif mode == "Competitive Analysis":
-        show_competitive_dashboard(results)
+            elif mode == "Competitive Intelligence":
+                show_competitive_dashboard(results)
 
-    elif mode == "Combined Analysis":
-        show_combined_dashboard(results)
+            else:
+                show_combined_dashboard(results)
 
-        with tab2:
+        with analytics_tab:
             show_charts(results)
 
-        with tab3:
+        with roadmap_tab:
             show_sentiment(results)
 
-        with tab4:
+        with ai_tab:
             show_jira(results)
 
     # ------------------------------------------------
@@ -230,7 +245,7 @@ if "analysis" in st.session_state:
 
     st.divider()
 
-    st.header("🤖 AI Product Copilot")
+    st.header("AI Product Copilot")
 
     st.caption(
         "Ask questions about customer insights, product strategy, competitive intelligence, roadmap planning, and business priorities."
@@ -275,7 +290,7 @@ if "analysis" in st.session_state:
 
     st.divider()
 
-    st.header("📄 Executive Report")
+    st.header(" Executive Report")
 
     st.caption(
         "Download a professionally formatted executive report."

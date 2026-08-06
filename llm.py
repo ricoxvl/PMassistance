@@ -9,37 +9,68 @@ client = Groq(
 MODEL = "llama-3.3-70b-versatile"
 
 
-# -----------------------------
-# Helper Functions
-# -----------------------------
+# ==========================================================
+# Universal JSON Generator
+# ==========================================================
 
-def ask_json(prompt):
-    content = ""
+SYSTEM_JSON = """
+You are an enterprise Product Intelligence AI.
 
-    system_prompt = """
-You are a JSON generator.
+Your ONLY job is to analyze documents and return JSON.
 
-Return ONLY valid JSON.
+Rules
 
-Rules:
-- Output must be valid JSON.
-- Do not include markdown.
-- Do not include ```json.
-- Do not explain anything.
-- Every property name MUST be enclosed in double quotes.
-- Every array must be properly closed.
-- Never omit quotation marks around keys.
+• Return ONLY valid JSON.
+
+• Never explain your reasoning.
+
+• Never wrap JSON in markdown.
+
+• Never invent facts.
+
+• Base EVERY conclusion ONLY on the supplied documents.
+
+• If evidence is missing,
+return null,
+an empty string,
+or an empty array.
+
+Never guess.
+
+Every executive insight must be traceable to evidence.
+
+Never fabricate customer issues.
+
+Never fabricate business impact.
+
+Never fabricate product health.
+
+Never fabricate confidence.
+
+Never fabricate roadmap items.
+
+Never fabricate Jira stories.
+
+Everything must originate from the uploaded documents.
 """
 
+
+def ask_json(prompt, required_keys=None):
+
     try:
+
         response = client.chat.completions.create(
+
             model=MODEL,
+
             temperature=0,
+
             response_format={"type": "json_object"},
+
             messages=[
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": SYSTEM_JSON
                 },
                 {
                     "role": "user",
@@ -48,949 +79,317 @@ Rules:
             ]
         )
 
-        content = response.choices[0].message.content
+        result = json.loads(
+            response.choices[0].message.content
+        )
 
-        return json.loads(content)
+        if required_keys:
 
-    except json.JSONDecodeError:
-        st.error("The AI returned invalid JSON.")
-        st.code(content)
-        return {}
+            for key in required_keys:
+
+                if key not in result:
+                    result[key] = None
+
+        return result
 
     except Exception as e:
-        st.error(f"Groq API Error: {e}")
+
+        st.error(e)
+
         return {}
+
+
+# ==========================================================
+# Executive Text Generator
+# ==========================================================
+
+SYSTEM_TEXT = """
+You are a Fortune 500 VP of Product.
+
+Write concise executive business reports.
+
+Every statement must come ONLY from the supplied data.
+
+Never invent information.
+
+Never use generic product advice.
+
+Never recommend something unless the supplied analysis supports it.
+
+If evidence is missing, say so.
+
+Do not hallucinate.
+"""
+
+
 def ask_text(prompt):
 
     try:
+
         response = client.chat.completions.create(
+
             model=MODEL,
+
             temperature=0,
+
             messages=[
+
                 {
-                    "role": "system",
-                    "content": "You are a helpful Product Management assistant."
+                    "role":"system",
+                    "content":SYSTEM_TEXT
                 },
+
                 {
-                    "role": "user",
-                    "content": prompt
+                    "role":"user",
+                    "content":prompt
                 }
+
             ]
         )
 
         return response.choices[0].message.content
 
     except Exception as e:
-        st.error(f"Groq API Error: {e}")
+
+        st.error(e)
+
         return ""
-# -----------------------------
-# Step 1
-# -----------------------------
+# ==========================================================
+# MASTER CUSTOMER INTELLIGENCE
+# ==========================================================
 
-def summarize_feedback(feedback_list):
+def customer_intelligence(feedback_list):
 
-    feedback = "\n".join(feedback_list)
+    if not feedback_list:
 
-    prompt = f"""
-
-You are a Senior Product Analyst preparing customer feedback for executive product analysis.
-
-Your objective is to summarize every customer feedback item while preserving its original meaning.
-
-Customer Feedback
-
-{feedback}
-
-====================================================
-RULES
-====================================================
-
-Summarize EVERY feedback item exactly once.
-
-Never merge multiple feedback items.
-
-Never omit a feedback item.
-
-Preserve the customer's primary issue, request, or compliment.
-
-Do NOT infer information that is not explicitly stated.
-
-Do NOT provide recommendations.
-
-Do NOT classify sentiment.
-
-Do NOT group similar feedback.
-
-====================================================
-WRITING REQUIREMENTS
-====================================================
-
-Each summary should:
-
-• Be between 8 and 20 words.
-
-• Be one concise sentence.
-
-• Clearly identify the customer's main point.
-
-• Use professional business language.
-
-• Preserve the original intent.
-
-Examples:
-
-Original:
-"The application crashes every time I upload a PDF."
-
-Summary:
-"Application crashes when uploading PDF files."
-
-Original:
-"I'd really like a dark mode because I work at night."
-
-Summary:
-"Customer requests a dark mode feature."
-
-Original:
-"Searching for invoices takes too long."
-
-Summary:
-"Customer reports slow invoice search performance."
-
-====================================================
-OUTPUT REQUIREMENTS
-====================================================
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "summaries":[
-        {{
-            "summary":"..."
-        }}
-    ]
-}}
-"""
-
-    return ask_json(prompt)
-
-# -----------------------------
-# Step 2
-# -----------------------------
-
-def cluster_feedback(summary_json):
-
-    prompt = f"""
-
-You are a Principal Product Manager responsible for analyzing customer feedback and identifying strategic product themes.
-
-Your objective is to organize customer feedback into executive-level product categories suitable for roadmap planning and portfolio management.
-
-Customer Feedback Summaries
-
-{json.dumps(summary_json, indent=2)}
-
-====================================================
-ANALYSIS OBJECTIVE
-====================================================
-
-Group similar customer issues into broad strategic themes.
-
-The categories should represent areas of product investment—not individual bugs.
-
-Think like a Product Director preparing a quarterly roadmap.
-
-====================================================
-CATEGORY RULES
-====================================================
-
-Create BETWEEN 3 AND 5 categories.
-
-Never create more than 5.
-
-Never create fewer than 3 unless the feedback is extremely limited.
-
-Every summary must belong to exactly one category.
-
-Categories should be broad enough to contain multiple customer requests.
-
-Do NOT create categories for individual bugs.
-
-====================================================
-GOOD CATEGORY EXAMPLES
-====================================================
-
-User Experience
-
-Performance & Reliability
-
-Authentication & Security
-
-Reporting & Analytics
-
-Notifications
-
-Integrations
-
-Search & Navigation
-
-Account Management
-
-Workflow Automation
-
-Collaboration
-
-Administration
-
-Feature Requests
-
-====================================================
-BAD CATEGORY EXAMPLES
-====================================================
-
-Broken Login
-
-Dark Mode Bug
-
-Upload Error
-
-Button Missing
-
-PDF Crash
-
-Slow Export
-
-====================================================
-NAMING RULES
-====================================================
-
-Category names should:
-
-• Be professional.
-
-• Contain 2–4 words.
-
-• Be Title Case.
-
-• Never contain punctuation.
-
-• Never contain numbers.
-
-• Never repeat.
-
-====================================================
-OUTPUT REQUIREMENTS
-====================================================
-
-For each category return:
-
-category
-
-count
-
-Sort categories by count descending.
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "categories":[
-        {{
-            "category":"Performance & Reliability",
-            "count":8
-        }},
-        {{
-            "category":"User Experience",
-            "count":6
-        }},
-        {{
-            "category":"Reporting & Analytics",
-            "count":5
-        }}
-    ]
-}}
-"""
-
-    return ask_json(prompt)
-
-
-# -----------------------------
-# Step 3
-# -----------------------------
-
-def prioritize_feedback(category_json):
-
-    prompt = f"""
-
-You are a Director of Product Management responsible for prioritizing product investments.
-
-Your objective is to prioritize customer issues based ONLY on the evidence contained in the provided customer feedback categories.
-
-Use ONLY the categories provided below.
-
-Do NOT invent additional issues, customer behavior, market conditions, revenue figures, or technical information that is not present.
-
-====================================================
-PRIORITIZATION FRAMEWORK
-====================================================
-
-Evaluate every category using these factors:
-
-1. Customer Impact
-- Estimate impact based on the frequency and importance of the category.
-- Determine whether it affects core customer workflows.
-- Do not assume customer counts that are not provided.
-
-2. Business Impact
-- Estimate business value based only on the available customer issues.
-- Consider potential effects on customer satisfaction, adoption, and retention.
-- Do not invent revenue, churn, or financial metrics.
-
-3. Technical Severity
-- Categories involving crashes, failures, login, security, reliability, or performance should generally receive higher priority.
-- Cosmetic improvements and minor enhancements should receive lower priority.
-
-4. Strategic Importance
-- Consider whether solving the issue would improve overall product quality, customer experience, or competitive positioning.
-- Base your decision only on the provided evidence.
-
-====================================================
-PRIORITY RULES
-====================================================
-
-Assign ONLY one priority:
-
-High
-Medium
-Low
-
-High
-
-Use when:
-• Core functionality is affected.
-• Reliability or stability issues exist.
-• The issue significantly impacts customer experience.
-• The issue represents a major business risk.
-
-Medium
-
-Use when:
-• Moderate customer impact exists.
-• Improves usability or workflow efficiency.
-• Important but not immediately business critical.
-
-Low
-
-Use when:
-• Cosmetic improvements.
-• Nice-to-have enhancements.
-• Minor feature requests.
-• Limited customer impact.
-
-====================================================
-REASONING RULES
-====================================================
-
-Prioritize ONLY using evidence contained in the provided categories.
-
-Do NOT invent:
-• Customer behavior
-• Revenue estimates
-• Market conditions
-• Competitive information
-• Engineering effort
-• Technical metrics
-
-If evidence is limited, make the most conservative priority decision.
-
-====================================================
-OUTPUT REQUIREMENTS
-====================================================
-
-Every category must appear exactly once.
-
-Do not create duplicate categories.
-
-Sort priorities from High to Low.
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "priorities":[
-        {{
-            "issue":"Performance & Stability",
-            "priority":"High",
-            "reason":"Reliability issues affect core product functionality and customer experience."
-        }},
-        {{
-            "issue":"User Experience",
-            "priority":"Medium",
-            "reason":"Improving usability will enhance customer satisfaction but is not business critical."
-        }},
-        {{
-            "issue":"Feature Requests",
-            "priority":"Low",
-            "reason":"Represents future product enhancements with limited immediate impact."
-        }}
-    ]
-}}
-
-Categories:
-
-{json.dumps(category_json, indent=2)}
-"""
-
-    return ask_json(prompt)
-
-
-# -----------------------------
-# Step 4
-# -----------------------------
-
-def generate_roadmap(priority_json):
-
-    prompt = f"""
-
-You are a Director of Product Management building an executive product roadmap.
-
-Your objective is to transform the prioritized customer issues into a realistic three-phase product roadmap.
-
-Use ONLY the prioritized categories below.
-
-Do not invent new issues.
-
-Roadmap Principles
-
-Sprint 1
-• Address critical customer pain points.
-• Resolve reliability and stability issues.
-• Improve core product functionality.
-
-Sprint 2
-• Improve usability and operational efficiency.
-• Enhance workflows.
-• Increase customer satisfaction.
-
-Sprint 3
-• Deliver strategic product innovation.
-• Improve competitive differentiation.
-• Create long-term business value.
-
-Requirements
-
-Create EXACTLY three sprints.
-
-Each sprint must contain:
-
-- sprint
-- goal
-- deliverables
-
-Each sprint must have exactly THREE deliverables.
-
-Deliverables should:
-
-• Be specific product initiatives.
-• Be unique.
-• Never repeat across sprints.
-• Be directly related to the prioritized issues.
-• Be suitable for an executive roadmap.
-
-Prioritize work using this order:
-
-1. High priority issues
-2. Medium priority issues
-3. Low priority issues
-
-Roadmap Quality
-
-Sprint 1 should reduce customer risk.
-
-Sprint 2 should improve customer experience.
-
-Sprint 3 should strengthen long-term market differentiation.
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "roadmap":[
-        {{
-            "sprint":"Sprint 1",
-            "goal":"...",
-            "deliverables":[
-                "...",
-                "...",
-                "..."
-            ]
-        }},
-        {{
-            "sprint":"Sprint 2",
-            "goal":"...",
-            "deliverables":[
-                "...",
-                "...",
-                "..."
-            ]
-        }},
-        {{
-            "sprint":"Sprint 3",
-            "goal":"...",
-            "deliverables":[
-                "...",
-                "...",
-                "..."
-            ]
-        }}
-    ]
-}}
-
-Prioritized Categories:
-
-{json.dumps(priority_json, indent=2)}
-"""
-
-    return ask_json(prompt)
-# -----------------------------
-# Step 5
-# -----------------------------
-
-def analyze_sentiment(feedback_list):
-
-    feedback = "\n".join(feedback_list)
-
-    prompt = f"""
-You are a Product Analyst.
-
-Analyze the sentiment of each customer feedback item.
-
-Rules:
-- Analyze every feedback item exactly once.
-- Use ONLY these sentiment labels:
-  - Positive
-  - Neutral
-  - Negative
-- Do not explain your reasoning.
-- Preserve the original feedback text.
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "sentiments":[
-        {{
-            "feedback":"The app crashes",
-            "sentiment":"Negative"
-        }},
-        {{
-            "feedback":"Love the redesign",
-            "sentiment":"Positive"
-        }}
-    ]
-}}
-
-Customer Feedback:
-
-{feedback}
-"""
-
-    return ask_json(prompt)
-
-# -----------------------------
-# Step 6 - Competitive Analysis
-# -----------------------------
-
-def competitive_analysis(feedback_list, competitor_text):
-
-    feedback = "\n".join(feedback_list)
-
-    if not competitor_text.strip():
         return {
-            "competitor_strengths": [],
-            "competitor_weaknesses": [],
-            "customer_requested_features": [],
-            "competitive_gaps": [],
-            "recommended_features": [],
-            "strategic_recommendations": []
+            "executive_summary": "No customer feedback was provided.",
+            "product_health": {},
+            "customer_satisfaction": {},
+            "confidence": {},
+            "business_impact": {},
+            "themes": [],
+            "sentiment": {},
+            "priorities": [],
+            "roadmap": [],
+            "recommendations": [],
+            "jira_stories": [],
+            "scorecard": []
         }
 
-    prompt = f"""
+    feedback = "\n".join(feedback_list)
 
-    You are a Senior Product Manager at a Fortune 500 technology company preparing an executive competitive assessment for leadership.
+    limited_data = ""
 
-    You have TWO independent sources of information.
+    if len(feedback_list) < 3:
 
-    ====================================================
-    SOURCE 1 — CUSTOMER FEEDBACK
-    ====================================================
+        limited_data = """
 
-    {feedback}
+    Evidence is limited.
 
-    ====================================================
-    SOURCE 2 — COMPETITOR DOCUMENT
-    ====================================================
+    Use conservative conclusions.
 
-    {competitor_text}
+    Lower confidence where appropriate.
 
-    ====================================================
-    OBJECTIVE
-    ====================================================
+    Avoid broad assumptions.
 
-    Compare both sources to identify competitive positioning, customer needs, market opportunities, and strategic product investments.
-
-    Base every conclusion on evidence found in the supplied data.
-
-    Do NOT invent competitor capabilities, customer requests, or recommendations.
-
-    If there is insufficient evidence for an item, omit it rather than guessing.
-
-    ====================================================
-    ANALYSIS PROCESS
-    ====================================================
-
-    Before generating your final answer, internally perform the following reasoning process.
-
-    Do NOT include this reasoning in the output.
-
-    Step 1
-    Read the entire competitor document and identify the competitor's major product capabilities.
-
-    Step 2
-    Read all customer feedback and identify recurring pain points, requests, and compliments.
-
-    Step 3
-    Compare both sources and identify where:
-    • Customers request capabilities competitors already provide.
-    • Competitors are weak where customers express demand.
-    • Both sources indicate the same strategic opportunity.
-
-    Step 4
-    Rank findings by:
-    • Frequency
-    • Business impact
-    • Customer impact
-    • Competitive differentiation
-
-    Step 5
-    Remove duplicate findings.
-
-    Step 6
-    Only after completing the above steps, generate the final JSON response.
-    ====================================================
-    EVIDENCE RULES
-    ====================================================
-
-    • Use competitor information ONLY from the competitor document.
-
-    • Use customer requests ONLY from customer feedback.
-
-    • If both sources support the same conclusion, prioritize it.
-
-    • Never duplicate the same idea in multiple sections.
-
-    • If evidence is weak or missing, leave the item out.
-
-    ====================================================
-    REASONING PROCESS
-    ====================================================
-
-    Before assigning priorities:
-
-    1. Review every product category.
-    2. Estimate customer impact.
-    3. Estimate business impact.
-    4. Estimate technical severity.
-    5. Estimate strategic importance.
-    6. Compare all categories against each other.
-    7. Assign High, Medium, or Low.
-    8. Generate the JSON response.
-
-    ====================================================
-    REASONING PROCESS
-    ====================================================
-
-    Before assigning priorities:
-
-    1. Review every product category.
-    2. Estimate customer impact.
-    3. Estimate business impact.
-    4. Estimate technical severity.
-    5. Estimate strategic importance.
-    6. Compare all categories against each other.
-    7. Assign High, Medium, or Low.
-    8. Generate the JSON response.
-
-    ====================================================
-    REASONING PROCESS
-    ====================================================
-
-    Before building the roadmap:
-
-    1. Review all prioritized issues.
-    2. Schedule High priority work first.
-    3. Schedule Medium priority work second.
-    4. Schedule Low priority work last.
-    5. Ensure no deliverable is duplicated.
-    6. Build a realistic progression from stabilization to innovation.
-    7. Generate the JSON roadmap.
-
-    ====================================================
-    REASONING PROCESS
-    ====================================================
-
-    Before creating Jira stories:
-
-    1. Review each prioritized issue.
-    2. Determine the customer problem.
-    3. Identify the desired business outcome.
-    4. Create a clear implementation objective.
-    5. Write measurable acceptance criteria.
-    6. Ensure every story is unique.
-    7. Generate the JSON output.
-    ====================================================
-    OUTPUT REQUIREMENTS
-    ====================================================
-
-    Return:
-
-    Exactly 3-5 items for each list.
-
-    Every item should:
-
-    • Be one concise executive sentence.
-    • Be under 20 words.
-    • Be unique.
-    • Avoid repeating ideas.
-    • Be written professionally.
-
-    ====================================================
-    SECTION DEFINITIONS
-    ====================================================
-
-    competitor_strengths
-
-    Strengths the competitor clearly demonstrates.
-
-    Examples:
-    - Comprehensive analytics dashboard
-    - Strong mobile experience
-    - Fast onboarding workflow
-
-    ----------------------------------------------------
-
-    competitor_weaknesses
-
-    Weaknesses, limitations, or missing capabilities identified in the competitor document.
-
-    Examples:
-    - Limited customization
-    - Weak reporting capabilities
-    - No workflow automation
-
-    ----------------------------------------------------
-
-    customer_requested_features
-
-    Recurring customer requests appearing in feedback.
-
-    Examples:
-    - Dark mode
-    - Mobile support
-    - Better reporting
-
-    ----------------------------------------------------
-
-    competitive_gaps
-
-    High-value opportunities where customer demand exists but competitors do not fully satisfy it.
-
-    These should represent potential market opportunities.
-
-    ----------------------------------------------------
-
-    recommended_features
-
-    Recommend realistic product investments that:
-
-    • Solve customer pain points
-    • Address competitive gaps
-    • Improve business value
-    • Fit a practical software product roadmap
-
-    Examples:
-
-    - AI-powered reporting assistant
-    - Real-time collaboration
-    - Predictive analytics dashboard
-    - Workflow automation
-    - Custom KPI dashboards
-
-    ----------------------------------------------------
-
-    strategic_recommendations
-
-    Provide executive-level business actions.
-
-    Use action-oriented recommendations such as:
-
-    • Invest
-    • Prioritize
-    • Accelerate
-    • Differentiate
-    • Expand
-    • Modernize
-    • Consolidate
-    • Partner
-
-    Avoid generic recommendations such as:
-
-    - Improve the product
-    - Add more features
-    - Enhance quality
-
-    Recommendations should be suitable for executive leadership.
-
-    ====================================================
-    RETURN ONLY VALID JSON
-    ====================================================
-
-    {{
-        "competitor_strengths": [
-            "...",
-            "...",
-            "..."
-        ],
-        "competitor_weaknesses": [
-            "...",
-            "...",
-            "..."
-        ],
-        "customer_requested_features": [
-            "...",
-            "...",
-            "..."
-        ],
-        "competitive_gaps": [
-            "...",
-            "...",
-            "..."
-        ],
-        "recommended_features": [
-            "...",
-            "...",
-            "..."
-        ],
-        "strategic_recommendations": [
-            "...",
-            "...",
-            "..."
-        ]
-    }}
     """
 
-    return ask_json(prompt)
-# -----------------------------
-# Step 7
-# -----------------------------
-
-def executive_summary(roadmap_json, competitive_json):
-
     prompt = f"""
 
-You are the Director of Product Management presenting findings to the executive leadership team.
+You are Product Intelligence AI.
 
-Your audience consists of:
-- VP of Product
-- Engineering Leadership
-- Executive Stakeholders
-- Business Leadership
+You are acting as an experienced:
 
-Use ONLY the information contained in the Competitive Analysis and Roadmap below.
+• VP of Product
+• Director of Product Management
+• Customer Success Executive
+• Product Analytics Lead
 
-Do NOT invent facts.
+Your responsibility is to analyze the uploaded customer feedback and produce a complete executive product intelligence report.
 
-Do NOT mention information that is not supported by the analysis.
+Everything you produce MUST come ONLY from the uploaded feedback.
 
-If something is missing, simply omit it.
+Never invent information.
 
-Your goal is to summarize the business implications of the analysis—not repeat lists.
+If evidence is weak,
+say so.
 
-Write in a concise executive style.
+If evidence does not exist,
+return an empty value.
 
-Return plain text only.
+==================================================
+CUSTOMER FEEDBACK
+==================================================
 
-Do NOT use Markdown.
-Do NOT use bullet points.
-Do NOT use tables.
-Do NOT use code fences.
+{feedback}
+{limited_data}
 
-Maximum length: 250 words.
+==================================================
+OBJECTIVE
+==================================================
 
-Use EXACTLY this structure:
+Analyze ALL customer feedback as a whole.
 
-Overview:
-Provide a concise assessment of the current competitive position.
+Do NOT perform independent tasks.
 
-Key Findings:
-Write exactly three short sentences summarizing the most important findings.
+Instead perform one holistic executive analysis.
 
-Recommended Roadmap:
-Sprint 1: ...
-Sprint 2: ...
-Sprint 3: ...
+Your conclusions must remain internally consistent.
 
-Business Impact:
-Explain how these recommendations could affect customer satisfaction, product differentiation, market position, and business growth.
+==================================================
+GENERATE
+==================================================
 
-Recommendation:
-Provide one concise executive recommendation for leadership.
+1 Executive Summary
 
-Competitive Analysis:
-{json.dumps(competitive_json, indent=2)}
+• Executive level
+• 150-250 words
+• Overall product assessment
+• Biggest risks
+• Biggest opportunities
 
-Roadmap:
-{json.dumps(roadmap_json, indent=2)}
-"""
-    return ask_text(prompt)
+--------------------------------------------------
 
-# -----------------------------
-# Step 8
-# -----------------------------
+2 Product Health
 
-def generate_jira_stories(priority_json):
+Return
 
-    prompt = f"""
+score (0-100)
 
-You are a Senior Product Manager creating Jira stories for an Agile product development team.
+status
 
-Your objective is to convert prioritized product categories into implementation-ready Jira stories.
+reason
 
-Use ONLY the prioritized categories below.
+Example
 
-Do NOT invent additional issues.
+Excellent
 
-====================================================
-STORY CREATION GUIDELINES
-====================================================
+Healthy
 
-Generate ONE Jira story for every High and Medium priority category.
+Needs Attention
 
-If fewer than three stories are produced, include the highest-value Low priority category.
+Critical
 
-Each story should represent a meaningful product initiative rather than a small bug fix.
+--------------------------------------------------
 
-====================================================
-STORY REQUIREMENTS
-====================================================
+3 Customer Satisfaction
 
-Each story must include:
+Return
+
+score
+
+reason
+
+--------------------------------------------------
+
+4 AI Confidence
+
+Return
+
+score
+
+reason
+
+Explain WHY confidence is high or low.
+
+--------------------------------------------------
+
+5 Business Impact
+
+Return
+
+level
+
+reason
+
+--------------------------------------------------
+
+6 Product Themes
+
+Return 3-8 themes.
+
+Each theme must include:
+
+theme
+
+mentions
+
+summary
+
+evidence
+
+Evidence should reference the feedback items or quote short supporting phrases.
+
+Do not invent evidence.
+
+--------------------------------------------------
+
+7 Customer Sentiment
+
+Return
+
+positive
+
+neutral
+
+negative
+
+Then
+
+overall_sentiment
+
+reason
+
+--------------------------------------------------
+
+8 Priority Matrix
+
+For every major issue return
+
+issue
+
+priority
+
+reason
+
+business_impact
+
+customer_impact
+
+--------------------------------------------------
+
+9 Product Roadmap
+
+Generate
+
+Sprint 1
+
+Sprint 2
+
+Sprint 3
+
+Each sprint
+
+goal
+
+deliverables
+
+--------------------------------------------------
+
+10 Recommended Actions
+
+Return 5 executive recommendations.
+
+Recommendations MUST come ONLY from evidence.
+
+--------------------------------------------------
+
+11 Jira Stories
+
+Generate implementation-ready Jira stories.
+
+Return
 
 id
 
@@ -1002,103 +401,459 @@ description
 
 acceptance
 
-====================================================
-TITLE RULES
-====================================================
+--------------------------------------------------
 
-Titles should:
+12 Executive Scorecard
 
-• Begin with a verb.
+Return
 
-• Be concise.
+metric
 
-• Describe a product initiative.
+value
 
-Examples:
+reason
 
-Improve User Authentication
+==================================================
+OUTPUT
+==================================================
 
-Optimize Dashboard Performance
-
-Enhance Search Experience
-
-Reduce System Latency
-
-Expand Reporting Capabilities
-
-====================================================
-DESCRIPTION RULES
-====================================================
-
-Descriptions should explain:
-
-• the customer problem
-
-• why it matters
-
-• the expected business benefit
-
-Use professional product management language.
-
-====================================================
-ACCEPTANCE CRITERIA
-====================================================
-
-Each story must include EXACTLY THREE measurable acceptance criteria.
-
-Acceptance criteria should be testable.
-
-Examples:
-
-User can complete login successfully.
-
-Dashboard loads in under two seconds.
-
-Search returns relevant results.
-
-Reports export successfully.
-
-====================================================
-OUTPUT REQUIREMENTS
-====================================================
-
-IDs should begin with:
-
-PROD-101
-
-PROD-102
-
-PROD-103
-
-...
-
-Increment sequentially.
-
-Do not repeat IDs.
-
-Return ONLY valid JSON.
-
-Format:
+Return ONLY JSON.
 
 {{
-    "stories":[
+  "executive_summary":"",
+
+  "product_health":{{
+      "score":0,
+      "status":"",
+      "reason":""
+  }},
+
+  "customer_satisfaction":{{
+      "score":0,
+      "reason":""
+  }},
+
+  "confidence":{{
+      "score":0,
+      "reason":""
+  }},
+
+  "business_impact":{{
+      "level":"",
+      "reason":""
+  }},
+
+"themes":[
+    {{
+        "theme":"",
+        "mentions":0,
+        "summary":"",
+        "evidence":[
+            ""
+        ]
+    }}
+],
+
+  "sentiment":{{
+      "positive":0,
+      "neutral":0,
+      "negative":0,
+      "overall_sentiment":"",
+      "reason":""
+  }},
+
+  "priorities":[
+      {{
+          "issue":"",
+          "priority":"",
+          "reason":"",
+          "business_impact":"",
+          "customer_impact":""
+      }}
+  ],
+
+  "roadmap":[
+      {{
+          "sprint":"",
+          "goal":"",
+          "deliverables":[]
+      }}
+  ],
+
+  "recommendations":[
+      ""
+  ],
+
+  "jira_stories":[
+      {{
+          "id":"",
+          "title":"",
+          "priority":"",
+          "description":"",
+          "acceptance":[]
+      }}
+  ],
+
+  "scorecard":[
+      {{
+          "metric":"",
+          "value":"",
+          "reason":""
+      }}
+  ]
+
+}}
+
+"""
+
+    return ask_json(
+
+    prompt,
+
+    required_keys=[
+
+        "executive_summary",
+
+        "product_health",
+
+        "customer_satisfaction",
+
+        "confidence",
+
+        "business_impact",
+
+        "themes",
+
+        "sentiment",
+
+        "priorities",
+
+        "roadmap",
+
+        "recommendations",
+
+        "jira_stories",
+
+        "scorecard"
+
+    ]
+
+)
+
+# ==========================================================
+# COMPETITIVE INTELLIGENCE
+# ==========================================================
+
+def competitive_analysis(feedback_list, competitor_text):
+
+    feedback = "\n".join(feedback_list)
+
+    if not competitor_text.strip():
+
+        return {
+
+            "executive_summary": "",
+
+            "market_position": {},
+
+            "competitor_strengths": [],
+
+            "competitor_weaknesses": [],
+
+            "competitive_gaps": [],
+
+            "customer_opportunities": [],
+
+            "recommended_initiatives": [],
+
+            "strategic_actions": [],
+
+            "scorecard": []
+
+        }
+
+    limited_data = ""
+
+    if len(feedback_list) < 3:
+
+        limited_data = """
+
+Evidence from customer feedback is limited.
+
+Only make conclusions directly supported by the supplied documents.
+
+Lower confidence where evidence is weak.
+
+Avoid broad assumptions.
+
+"""
+
+    prompt = f"""
+
+You are a VP of Product Strategy.
+
+You are preparing an executive competitive intelligence report.
+
+You have TWO sources.
+
+==================================================
+SOURCE 1
+CUSTOMER FEEDBACK
+==================================================
+
+{feedback}
+
+==================================================
+SOURCE 2
+COMPETITOR DOCUMENT
+==================================================
+
+{competitor_text}
+
+==================================================
+OBJECTIVE
+==================================================
+
+Compare the customer feedback and competitor document as a single executive analysis.
+
+Every conclusion must be directly supported by the supplied documents.
+
+Do not invent:
+
+• competitor capabilities
+
+• competitor weaknesses
+
+• customer requests
+
+• business impact
+
+• strategic opportunities
+
+If evidence is missing,
+
+state that evidence is limited,
+
+or return an empty value.
+
+Use conservative conclusions whenever evidence is weak.
+
+{limited_data}
+
+==================================================
+GENERATE
+==================================================
+
+1 Executive Summary
+
+Explain the current competitive position.
+
+Discuss major strengths.
+
+Discuss major weaknesses.
+
+Discuss strategic opportunities.
+
+--------------------------------------------------
+
+2 Market Position
+
+Return
+
+overall_position
+
+reason
+
+Example
+
+Leader
+
+Competitive
+
+Emerging
+
+Behind Market
+
+--------------------------------------------------
+
+3 Competitor Strengths
+
+Return
+
+strength
+
+business_value
+
+--------------------------------------------------
+
+4 Competitor Weaknesses
+
+Return
+
+weakness
+
+business_risk
+
+--------------------------------------------------
+
+5 Competitive Opportunities
+
+Return
+
+opportunity
+
+customer_value
+
+--------------------------------------------------
+
+6 Product Investments
+
+Return
+
+initiative
+
+priority
+
+reason
+
+--------------------------------------------------
+
+7 Executive Recommendations
+
+Return five recommendations.
+
+Begin recommendations with action verbs.
+
+Examples
+
+Invest
+
+Expand
+
+Prioritize
+
+Accelerate
+
+Differentiate
+
+Modernize
+
+Never return generic advice.
+
+--------------------------------------------------
+
+8 Executive Scorecard
+
+Return
+
+metric
+
+value
+
+reason
+
+==================================================
+RETURN JSON
+==================================================
+
+{{
+    "executive_summary":"",
+
+    "market_position":{{
+        "overall_position":"",
+        "reason":""
+}},
+
+    "competitor_strengths":[
         {{
-            "id":"PROD-101",
-            "title":"Improve Authentication",
-            "priority":"High",
-            "description":"Users experience authentication failures that prevent access to core functionality. Improving authentication reliability will reduce customer frustration and increase platform stability.",
-            "acceptance":[
-                "Login succeeds on the first attempt.",
-                "Authentication errors are logged.",
-                "Password reset completes successfully."
+            "strength":"",
+            "business_value":"",
+            "evidence":[
+                ""
             ]
+        }}
+    ],
+
+    "competitor_weaknesses":[
+        {{
+            "weakness":"",
+            "business_risk":"",
+            "evidence":[
+                ""
+            ]
+        }}
+    ],
+
+    "competitive_gaps":[
+        {{
+            "gap":"",
+            "reason":"",
+            "evidence":[
+                ""
+            ]
+        }}
+    ],
+
+    "customer_opportunities":[
+        {{
+            "opportunity":"",
+            "customer_value":"",
+            "evidence":[
+                ""
+            ]
+        }}
+    ],
+
+"recommended_initiatives":[
+    {{
+        "initiative":"",
+        "priority":"",
+        "reason":"",
+        "evidence":[
+            ""
+        ]
+    }}
+],
+
+    "strategic_actions":[
+        ""
+    ],
+
+    "scorecard":[
+        {{
+            "metric":"",
+            "value":"",
+            "reason":""
         }}
     ]
 }}
 
-Prioritized Categories:
-
-{json.dumps(priority_json, indent=2)}
 """
 
-    return ask_json(prompt)  
+    return ask_json(
+
+    prompt,
+
+    required_keys=[
+
+        "executive_summary",
+
+        "market_position",
+
+        "competitor_strengths",
+
+        "competitor_weaknesses",
+
+        "competitive_gaps",
+
+        "customer_opportunities",
+
+        "recommended_initiatives",
+
+        "strategic_actions",
+
+        "scorecard"
+
+    ]
+
+)

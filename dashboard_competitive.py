@@ -53,52 +53,61 @@ def show_competitive_dashboard(results):
     # Load Competitive Analysis
     # =====================================================
 
-    competitive = results.get(
-        "competitive_analysis",
-        {}
-    )
+    competitive = results.get("competitive_analysis", {})
 
-    strengths = competitive.get(
-        "competitor_strengths",
+    executive_summary = competitive.get("executive_summary", "")
+
+    market_position = competitive.get("market_position", {})
+
+    strengths = competitive.get("competitor_strengths", [])
+
+    weaknesses = competitive.get("competitor_weaknesses", [])
+
+    opportunities = competitive.get("competitive_gaps", [])
+
+    customer_opportunities = competitive.get(
+        "customer_opportunities",
         []
     )
 
-    weaknesses = competitive.get(
-        "competitor_weaknesses",
-        []
-    )
-
-    opportunities = competitive.get(
-        "competitive_gaps",
-        []
-    )
-
-    customer_requests = competitive.get(
-        "customer_requested_features",
-        []
-    )
-
-    recommendations = competitive.get(
-        "recommended_features",
+    recommended_initiatives = competitive.get(
+        "recommended_initiatives",
         []
     )
 
     strategic_actions = competitive.get(
-        "strategic_recommendations",
+        "strategic_actions",
         []
     )
-        # =====================================================
+
+    scorecard = competitive.get("scorecard", [])
+    # =====================================================
     # Executive Metrics
     # =====================================================
 
     strength_count = len(strengths)
     weakness_count = len(weaknesses)
     opportunity_count = len(opportunities)
-    recommendation_count = len(recommendations)
+
+    recommendation_count = len(recommended_initiatives)
+
     strategy_count = len(strategic_actions)
 
+    market_label = market_position.get(
+        "overall_position",
+        "Unknown"
+    )
+
+    market_reason = market_position.get(
+        "reason",
+        "No assessment available."
+    )
+
+
+    # Keep a simple score only for dashboard visuals
+
     market_score = max(
-        0,
+        60,
         min(
             100,
             80
@@ -108,110 +117,45 @@ def show_competitive_dashboard(results):
         )
     )
 
-    if market_score >= 85:
-        market_position = "Market Leader"
-
-    elif market_score >= 70:
-        market_position = "Strong"
-
-    elif market_score >= 55:
-        market_position = "Competitive"
-
-    else:
-        market_position = "Needs Investment"
-
     if weakness_count >= 5:
         competitive_risk = "High"
-
     elif weakness_count >= 3:
         competitive_risk = "Medium"
-
     else:
         competitive_risk = "Low"
-        # =====================================================
+    # =====================================================
     # Title
     # =====================================================
 
-    st.title("Product Intelligence AI")
+    st.header("Competitive Intelligence Dashboard")
 
     st.caption(
-        "Executive Competitive Intelligence Dashboard for strategic product planning, market benchmarking, and investment decisions."
+        "AI-generated competitive benchmarking, market analysis, and strategic recommendations."
     )
-        # =====================================================
-    # Executive KPI Dashboard
+
     # =====================================================
-
-    def executive_card(title, value, subtitle):
-
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-title">{title}</div>
-            <div class="kpi-number">{value}</div>
-            <div class="kpi-trend">{subtitle}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-
-    with c1:
-        executive_card(
-            "🏆 Market Position",
-            f"{market_score}/100",
-            market_position
-        )
-
-    with c2:
-        executive_card(
-            "⚠️ Competitive Risk",
-            competitive_risk,
-            "Current market exposure"
-        )
-
-    with c3:
-        executive_card(
-            "📈 Growth Opportunities",
-            opportunity_count,
-            "Competitive gaps identified"
-        )
-
-    with c4:
-        executive_card(
-            "💡 Innovation Pipeline",
-            recommendation_count,
-            "AI product ideas"
-        )
-
-    with c5:
-        executive_card(
-            "🎯 Strategic Actions",
-            strategy_count,
-            "Leadership initiatives"
-        )
-
-    st.divider()
-        # =====================================================
     # Executive Overview
     # =====================================================
 
-    st.subheader("📊 Executive Overview")
+    st.subheader("Executive Overview")
 
     overview_left, overview_right = st.columns([3, 1])
 
     biggest_strength = (
-        strengths[0]
-        if strengths
+        strengths[0].get("strength", "Unknown")
+        if strengths and isinstance(strengths[0], dict)
         else "No major competitive advantages identified."
     )
 
     biggest_gap = (
-        weaknesses[0]
-        if weaknesses
+        weaknesses[0].get("weakness", "Unknown")
+        if weaknesses and isinstance(weaknesses[0], dict)
         else "No significant competitive gaps identified."
     )
 
     top_opportunity = (
-        opportunities[0]
-        if opportunities
+        opportunities[0].get("gap", "Unknown")
+        if opportunities and isinstance(opportunities[0], dict)
         else "No major market opportunities identified."
     )
 
@@ -220,50 +164,50 @@ def show_competitive_dashboard(results):
         with st.container(border=True):
 
             st.markdown(f"""
-### 🤖 AI Executive Summary
+    ### AI Executive Summary
 
-**🏆 Market Position:** **{market_position} ({market_score}/100)**
+    **Market Position:** **{market_label} ({market_score}/100)**
 
-**💪 Strongest Competitive Advantage:** **{biggest_strength}**
+    **Strongest Competitive Advantage:** **{biggest_strength}**
 
-**⚠️ Largest Competitive Gap:** **{biggest_gap}**
+    **Largest Competitive Gap:** **{biggest_gap}**
 
-**📈 Highest Growth Opportunity:** **{top_opportunity}**
+    **📈 Highest Growth Opportunity:** **{top_opportunity}**
 
-**💡 Executive Recommendation**
+    **Executive Recommendation**
 
-Focus product investment on **{top_opportunity.lower()}** while addressing **{biggest_gap.lower()}** to strengthen long-term market differentiation.
+    Focus product investment on **{top_opportunity.lower()}** while addressing **{biggest_gap.lower()}** to strengthen long-term market differentiation.
 
----
+    ---
 
-### Executive Takeaway
+    ### Executive Takeaway
 
-Competitive benchmarking indicates the organization is currently positioned as **{market_position.lower()}**.
+    Competitive benchmarking indicates the organization is currently positioned as **{market_label.lower()}**.
 
-The analysis identified **{strength_count} competitive strengths**, **{weakness_count} competitive weaknesses**, and **{opportunity_count} market opportunities**.
+    The analysis identified **{strength_count} competitive strengths**, **{weakness_count} competitive weaknesses**, and **{opportunity_count} market opportunities**.
 
-Leadership should prioritize closing high-impact competitive gaps while accelerating investment in differentiated product capabilities.
-            """)
+    Leadership should prioritize closing high-impact competitive gaps while accelerating investment in differentiated product capabilities.
+    """)
 
     with overview_right:
 
         if market_score >= 85:
-            st.success(f"🏆 Market Position\n\n{market_score}/100")
+            st.success(f"Market Position\n\n{market_score}/100")
         elif market_score >= 70:
-            st.warning(f"🏆 Market Position\n\n{market_score}/100")
+            st.warning(f"Market Position\n\n{market_score}/100")
         else:
-            st.error(f"🏆 Market Position\n\n{market_score}/100")
+            st.error(f"Market Position\n\n{market_score}/100")
 
         if competitive_risk == "Low":
-            st.success("⚠️ Competitive Risk\n\nLow")
+            st.success("Competitive Risk\n\nLow")
         elif competitive_risk == "Medium":
-            st.warning("⚠️ Competitive Risk\n\nMedium")
+            st.warning("Competitive Risk\n\nMedium")
         else:
-            st.error("⚠️ Competitive Risk\n\nHigh")
+            st.error("Competitive Risk\n\nHigh")
 
         st.info(f"📈 Opportunities\n\n{opportunity_count}")
 
-        st.info(f"💡 AI Opportunities\n\n{recommendation_count}")
+        st.info(f"AI Opportunities\n\n{recommendation_count}")
 
     st.divider()
 
@@ -271,7 +215,7 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
     # Competitive Benchmark
     # =====================================================
 
-    st.subheader("🏆 Competitive Benchmark")
+    st.subheader("Competitive Benchmark")
 
     col1, col2, col3 = st.columns(3)
 
@@ -279,12 +223,28 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## 💪 Competitive Advantages")
+            st.markdown("## Competitive Advantages")
 
             if strengths:
 
                 for item in strengths:
-                    st.success(item)
+
+                    if not isinstance(item, dict):
+                        continue
+
+                    st.success(item.get("strength", "Unknown"))
+
+                    business_value = item.get("business_value", "")
+
+                    if business_value:
+                        st.caption(f"Business Value: {business_value}")
+
+                    evidence = item.get("evidence", [])
+
+                    if evidence:
+                        with st.expander("View Evidence"):
+                            for source in evidence:
+                                st.write(f"• {source}")
 
             else:
                 st.info("No competitive advantages identified.")
@@ -293,12 +253,28 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## ⚠️ Competitive Gaps")
+            st.markdown("## Competitive Gaps")
 
             if weaknesses:
 
                 for item in weaknesses:
-                    st.error(item)
+
+                    if not isinstance(item, dict):
+                        continue
+
+                    st.error(item.get("weakness", "Unknown"))
+
+                    business_risk = item.get("business_risk", "")
+
+                    if business_risk:
+                        st.caption(f"Business Risk: {business_risk}")
+
+                    evidence = item.get("evidence", [])
+
+                    if evidence:
+                        with st.expander("View Evidence"):
+                            for source in evidence:
+                                st.write(f"• {source}")
 
             else:
                 st.info("No competitive weaknesses identified.")
@@ -307,18 +283,30 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## 🚀 Investment Opportunities")
+            st.markdown("## Investment Opportunities")
 
             if opportunities:
 
                 for item in opportunities:
 
-                    st.markdown(f"**• {item}**")
+                    if not isinstance(item, dict):
+                        continue
 
-                    st.caption(
-                        "Potential for revenue growth, product differentiation, "
-                        "or market expansion."
+                    st.markdown(
+                        f"**• {item.get('gap', 'Unknown')}**"
                     )
+
+                    reason = item.get("reason", "")
+
+                    if reason:
+                        st.caption(reason)
+
+                    evidence = item.get("evidence", [])
+
+                    if evidence:
+                        with st.expander("View Evidence"):
+                            for source in evidence:
+                                st.write(f"• {source}")
 
             else:
 
@@ -327,96 +315,14 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
     st.divider()
 
     # =====================================================
-    # Market Opportunities
-    # =====================================================
-
-    st.subheader("📈 Market Opportunities")
-
-    if opportunities:
-
-        cols = st.columns(min(3, len(opportunities)))
-
-        for col, opportunity in zip(cols, opportunities):
-
-            with col:
-
-                with st.container(border=True):
-
-                    st.markdown(f"## 🚀 Opportunity")
-
-                    st.write(opportunity)
-
-                    st.markdown("---")
-
-                    st.metric("Strategic Impact", "High")
-
-                    st.metric("Customer Demand", "High")
-
-                    st.metric("Investment Horizon", "6-12 Months")
-    else:
-
-        st.info("No market opportunities identified.")
-
-    st.divider()
-
-    # =====================================================
-    # Voice of Customer
-    # =====================================================
-
-    st.subheader("🗣️ Voice of Customer")
-
-    if customer_requests:
-
-        for request in customer_requests:
-
-            with st.container(border=True):
-
-                left, right = st.columns([3,1])
-
-                with left:
-
-                    st.markdown(f"### 💬 {request}")
-
-                    st.write(
-                        "This feature has been consistently requested by customers "
-                        "and represents an opportunity to improve customer satisfaction "
-                        "and product competitiveness."
-                    )
-
-                with right:
-
-                    st.metric(
-                        "Business Value",
-                        "High"
-                    )
-
-                    st.metric(
-                        "Revenue Impact",
-                        "Medium"
-                    )
-
-                    st.metric(
-                        "Roadmap Priority",
-                        "Next Release"
-                    )
-
-                    st.success("Leadership Candidate")
-                    
-    else:
-
-        st.info("No customer feature requests available.")
-
-    st.divider()
-
-    # =====================================================
     # Strategic Themes
     # =====================================================
 
-    st.subheader("🧭 Strategic Themes")
+    st.subheader(" Strategic Themes")
 
-    theme1 = customer_requests[:2]
+    theme1 = customer_opportunities[:2]
     theme2 = weaknesses[:2]
-    theme3 = recommendations[:2]
+    theme3 = recommended_initiatives[:2]
 
     col1, col2, col3 = st.columns(3)
 
@@ -428,12 +334,16 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## 😊 Customer Experience")
+            st.markdown("## Customer Experience")
 
             if theme1:
 
                 for item in theme1:
-                    st.success(item)
+
+                    if isinstance(item, dict):
+                        st.success(
+                            item.get("opportunity", "Unknown")
+                        )
 
             else:
                 st.info("No customer experience initiatives identified.")
@@ -464,12 +374,16 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## 🏆 Competitive Differentiation")
+            st.markdown("## Competitive Differentiation")
 
             if theme2:
 
                 for item in theme2:
-                    st.error(item)
+
+                    if not isinstance(item, dict):
+                        continue
+
+                    st.error(item.get("weakness", "Unknown"))
 
             else:
                 st.info("No competitive gaps identified.")
@@ -500,12 +414,16 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
 
         with st.container(border=True):
 
-            st.markdown("## 🚀 Product Innovation")
+            st.markdown("## Product Innovation")
 
             if theme3:
 
                 for item in theme3:
-                    st.info(item)
+
+                    if not isinstance(item, dict):
+                        continue
+
+                    st.info(item.get("initiative", "Unknown"))
 
             else:
                 st.info("No innovation initiatives identified.")
@@ -532,35 +450,55 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
     # AI Product Innovation Pipeline
     # =====================================================
 
-    st.subheader("🚀 AI Product Innovation Pipeline")
+    st.subheader("Recommended Innovation Pipeline")
 
-    if recommendations:
+    if recommended_initiatives:
 
         cols = st.columns(2)
 
-        for i, feature in enumerate(recommendations):
+        for i, feature in enumerate(recommended_initiatives):
+
+            if not isinstance(feature, dict):
+                continue
 
             with cols[i % 2]:
 
                 with st.container(border=True):
 
-                    st.markdown(f"## 💡 {feature}")
-
-                    st.markdown("### Innovation Priority")
-                    st.success("High")
-
-                    st.markdown("### Competitive Differentiation")
-                    st.info("Strong")
-
-                    st.markdown("### Expected Customer Impact")
-                    st.success("High")
-
-                    st.markdown("### Executive Recommendation")
-
-                    st.write(
-                        "Evaluate this capability for inclusion in the next strategic roadmap cycle."
+                    initiative = feature.get(
+                        "initiative",
+                        "Unknown Initiative"
                     )
 
+                    priority = feature.get(
+                        "priority",
+                        "Unknown"
+                    )
+
+                    reason = feature.get(
+                        "reason",
+                        ""
+                    )
+
+                    evidence = feature.get(
+                        "evidence",
+                        []
+                    )
+
+                    st.markdown(f"## {initiative}")
+
+                    st.markdown("### Innovation Priority")
+                    st.info(priority)
+
+                    st.markdown("### Strategic Rationale")
+                    st.write(reason)
+
+                    if evidence:
+
+                        st.markdown("### Supporting Evidence")
+
+                        for source in evidence:
+                            st.write(f"• {source}")
     else:
 
         st.info("No AI product recommendations available.")
@@ -568,68 +506,35 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
     st.divider()
 
     # =====================================================
-    # Strategic Initiatives
-    # =====================================================
-
-    st.subheader("🎯 Strategic Initiatives")
-
-    if strategic_actions:
-
-        for action in strategic_actions:
-
-            with st.container(border=True):
-
-                st.markdown(f"## 📌 {action}")
-
-                col1, col2, col3 = st.columns(3)
-
-                with col1:
-                    st.metric(
-                        "Priority",
-                        "High"
-                    )
-
-                with col2:
-                    st.metric(
-                        "Timeline",
-                        "Next 6 Months"
-                    )
-
-                with col3:
-                    st.metric(
-                        "Business Impact",
-                        "High"
-                    )
-
-                st.markdown("### Expected Outcome")
-
-                st.write(
-                    "Strengthen market positioning while increasing customer value and competitive differentiation."
-                )
-
-    else:
-
-        st.info("No strategic initiatives available.")
-
-    st.divider()
-        # =====================================================
     # Product Investment Roadmap
     # =====================================================
 
-    st.subheader("🗺️ Product Investment Roadmap")
+    st.subheader("Product Investment Roadmap")
 
     roadmap_items = []
 
     roadmap_items.extend(
-        [("Immediate", item) for item in weaknesses[:2]]
+        [
+            ("Immediate", item.get("weakness", "Unknown"))
+            for item in weaknesses[:2]
+            if isinstance(item, dict)
+        ]
     )
 
     roadmap_items.extend(
-        [("Next Release", item) for item in customer_requests[:2]]
+        [
+            ("Next Release", item.get("opportunity", "Unknown"))
+            for item in customer_opportunities[:2]
+            if isinstance(item, dict)
+        ]
     )
 
     roadmap_items.extend(
-        [("Strategic", item) for item in recommendations[:2]]
+        [
+            ("Strategic", item.get("initiative", "Unknown"))
+            for item in recommended_initiatives[:2]
+            if isinstance(item, dict)
+        ]
     )
 
     if roadmap_items:
@@ -681,12 +586,12 @@ Leadership should prioritize closing high-impact competitive gaps while accelera
     # Executive Brief
     # =====================================================
 
-    st.subheader("📄 Executive Brief")
+    st.subheader("Executive Summary")
 
     with st.container(border=True):
 
         st.markdown(f"""
-## 🤖 AI Executive Strategy Report
+## AI Executive Strategy Report
 
 This competitive intelligence assessment combines benchmarking, customer demand,
 market opportunities, and AI-generated strategic recommendations to support
@@ -696,7 +601,9 @@ executive product planning.
 
 ### Executive Assessment
 
-**Current Market Position:** **{market_position} ({market_score}/100)**
+**Current Market Position:** **{market_label} ({market_score}/100)**
+
+**Reason:** {market_reason}
 
 **Competitive Risk:** **{competitive_risk}**
 
@@ -712,95 +619,104 @@ executive product planning.
 
 ### AI Executive Summary
 
-{results.get("executive_summary", "No executive summary available.")}
-
----
+{executive_summary or "No executive summary available."}
 """)
 
         metric1, metric2, metric3, metric4 = st.columns(4)
 
         with metric1:
-
             st.metric(
                 "Market Score",
                 f"{market_score}/100"
             )
 
         with metric2:
-
             st.metric(
                 "Competitive Gaps",
                 weakness_count
             )
 
         with metric3:
-
             st.metric(
                 "Growth Opportunities",
                 opportunity_count
             )
 
         with metric4:
-
             st.metric(
                 "AI Recommendations",
                 recommendation_count
             )
 
-    st.divider()
+    st.subheader("Executive Scorecard")
 
+    if scorecard:
+        scorecard_df = pd.DataFrame(scorecard)
+
+        st.dataframe(
+            scorecard_df,
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("No executive scorecard available.")
+
+    st.divider()
     # =====================================================
     # Strategic Decision Support
     # =====================================================
 
-    st.subheader("🎯 Strategic Decision Support")
+    st.subheader("Investment Recommendations")
 
     with st.container(border=True):
 
         st.markdown("""
-    ### Executive Investment Portfolio
+### Executive Investment Portfolio
 
-    The initiatives below have been prioritized using competitive benchmarking,
-    customer demand, market opportunity, and AI strategic analysis.
+The initiatives below have been prioritized using competitive benchmarking,
+customer demand, market opportunity, and AI strategic analysis.
 
-    These recommendations are intended to support roadmap planning,
-    capital allocation, and executive decision making.
-    """)
+These recommendations are intended to support roadmap planning,
+capital allocation, and executive decision making.
+""")
 
         portfolio = []
 
         # Competitive gaps
         for item in weaknesses[:2]:
-            portfolio.append({
-                "Initiative": item,
-                "Portfolio": "Protect Market Position",
-                "Investment": "Immediate",
-                "Business Value": "High",
-                "Customer Impact": "Medium",
-                "Executive Decision": "Approve Funding"
-            })
+            if isinstance(item, dict):
+                portfolio.append({
+                    "Initiative": item.get("weakness", "Unknown"),
+                    "Portfolio": "Protect Market Position",
+                    "Investment": "Immediate",
+                    "Business Value": "High",
+                    "Customer Impact": "Medium",
+                    "Executive Decision": "Approve Funding"
+                })
 
         # Customer demand
-        for item in customer_requests[:2]:
-            portfolio.append({
-                "Initiative": item,
-                "Portfolio": "Growth",
-                "Investment": "Next Release",
-                "Business Value": "High",
-                "Customer Impact": "High",
-                "Executive Decision": "Roadmap Priority"
-            })
+        for item in customer_opportunities[:2]:
+            if isinstance(item, dict):
+                portfolio.append({
+                    "Initiative": item.get("opportunity", "Unknown"),
+                    "Portfolio": "Growth",
+                    "Investment": "Next Release",
+                    "Business Value": "High",
+                    "Customer Impact": "High",
+                    "Executive Decision": "Roadmap Priority"
+                })
 
         # Innovation
-        for item in recommendations[:2]:
-            portfolio.append({
-                "Initiative": item,
-                "Portfolio": "Innovation",
-                "Investment": "Future Planning",
-                "Business Value": "Medium",
-                "Customer Impact": "High",
-                "Executive Decision": "Evaluate Business Case"
-            })
+        for item in recommended_initiatives[:2]:
+            if isinstance(item, dict):
+                portfolio.append({
+                    "Initiative": item.get("initiative", "Unknown"),
+                    "Portfolio": "Innovation",
+                    "Investment": "Future Planning",
+                    "Business Value": "Medium",
+                    "Customer Impact": "High",
+                    "Executive Decision": "Evaluate Business Case"
+                })
 
         if portfolio:
 
@@ -813,57 +729,22 @@ executive product planning.
             )
 
         else:
-
             st.info("No investment recommendations available.")
-
-        st.markdown("---")
-
-        st.markdown("### Executive Portfolio Summary")
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            st.metric(
-                "Immediate Investments",
-                len(weaknesses[:2])
-            )
-
-        with col2:
-            st.metric(
-                "Roadmap Candidates",
-                len(customer_requests[:2])
-            )
-
-        with col3:
-            st.metric(
-                "Innovation Bets",
-                len(recommendations[:2])
-            )
-
-        with col4:
-            st.metric(
-                "Estimated Strategic Value",
-                "High"
-            )
-
-        st.markdown("---")
 
         st.markdown("### Executive Recommendation")
 
         st.info(f"""
-    **Current Competitive Position:** **{market_position}**
+**Current Competitive Position:** **{market_label}**
 
-    ### Recommended Actions
+### Recommended Actions
 
-    ✅ Fund initiatives that eliminate the most critical competitive gaps.
+- Fund initiatives that eliminate the most critical competitive gaps.
+- Prioritize customer-requested capabilities for the next product release.
+- Continue investing in differentiated AI-enabled capabilities to maintain long-term competitive advantage.
 
-    ✅ Prioritize customer-requested capabilities for the next product release.
+### Executive Investment Outlook
 
-    ✅ Continue investing in differentiated AI-enabled capabilities to maintain long-term competitive advantage.
+Based on the current competitive landscape, the organization has **{opportunity_count} high-value market opportunities** and **{recommendation_count} strategic innovation opportunities**.
 
-    ### Executive Investment Outlook
-
-    Based on the current competitive landscape, the organization has **{opportunity_count} high-value market opportunities** and **{recommendation_count} strategic innovation opportunities**.
-
-    The recommended investment strategy balances **short-term competitive improvements** with **long-term product differentiation**, supporting sustainable growth while reducing competitive risk.
-    """)
+The recommended investment strategy balances **short-term competitive improvements** with **long-term product differentiation**, supporting sustainable growth while reducing competitive risk.
+""")

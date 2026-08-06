@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+
 from theme import inject_theme
 
 inject_theme()
@@ -8,198 +9,206 @@ inject_theme()
 
 def show_customer_dashboard(results):
 
-    # =====================================================
-    # Custom CSS
-    # =====================================================
+    # ==========================================================
+    # Executive Styling
+    # ==========================================================
 
     st.markdown("""
     <style>
 
-    .kpi-card{
-        background: var(--secondary-background-color);
-        border-left:5px solid var(--primary-color);
+    .metric-card{
+        background:#ffffff08;
+        border:1px solid #ffffff18;
         border-radius:12px;
-        padding:20px;
-        box-shadow:0 2px 8px rgba(0,0,0,.08);
-        height:140px;
+        padding:18px;
+        margin-bottom:15px;
     }
 
-    .kpi-title{
+    .metric-title{
         font-size:14px;
+        color:#AAAAAA;
         font-weight:600;
-        color:var(--text-color);
-        opacity:.70;
     }
 
-    .kpi-number{
+    .metric-value{
         font-size:34px;
         font-weight:700;
-        color:var(--text-color);
-        margin-top:10px;
+        margin-top:8px;
     }
 
-    .kpi-subtitle{
-        margin-top:10px;
+    .metric-sub{
         font-size:13px;
-        color:var(--text-color);
-        opacity:.75;
+        color:#BBBBBB;
+        margin-top:8px;
     }
 
     </style>
     """, unsafe_allow_html=True)
 
-    # =====================================================
-    # Load AI Results
-    # =====================================================
-
-    categories = results.get("categories", [])
-    if isinstance(categories, dict):
-        categories = categories.get("categories", [])
-
-    priorities = results.get("priorities", [])
-    if isinstance(priorities, dict):
-        priorities = priorities.get("priorities", [])
-
-    roadmap = results.get("roadmap", [])
-    if isinstance(roadmap, dict):
-        roadmap = roadmap.get("roadmap", [])
-
-    sentiments = results.get("sentiment", [])
-    if isinstance(sentiments, dict):
-        sentiments = sentiments.get("sentiments", [])
+    # ==========================================================
+    # Read AI Results
+    # ==========================================================
 
     executive_summary = results.get(
         "executive_summary",
         "No executive summary available."
     )
 
-    category_df = pd.DataFrame(categories)
-    sentiment_df = pd.DataFrame(sentiments)
+    product_health = results.get("product_health", {})
 
-    # =====================================================
-    # Calculate Executive Metrics
-    # =====================================================
+    customer_satisfaction = results.get(
+        "customer_satisfaction",
+        {}
+    )
+
+    business_impact = results.get(
+        "business_impact",
+        {}
+    )
+
+    confidence = results.get(
+        "confidence",
+        {}
+    )
+
+    themes = results.get(
+        "themes",
+        []
+    )
+
+    priorities = results.get(
+        "priorities",
+        []
+    )
+
+    roadmap = results.get(
+        "roadmap",
+        []
+    )
+
+    recommendations = results.get(
+        "recommendations",
+        []
+    )
+
+    jira_stories = results.get(
+        "jira_stories",
+        []
+    )
+
+    scorecard = results.get(
+        "scorecard",
+        []
+    )
+
+    sentiment = results.get(
+        "sentiment",
+        {}
+    )
+
+    # ==========================================================
+    # Convert Themes to DataFrame
+    # ==========================================================
+
+    theme_df = pd.DataFrame([
+        {
+            "Theme": item.get("theme", ""),
+            "Mentions": item.get("mentions", 0)
+        }
+        for item in themes
+    ])
+
+    # ==========================================================
+    # KPI Values
+    # ==========================================================
+
+    health_score = product_health.get("score", 0)
+    health_status = product_health.get("status", "Unknown")
+
+    satisfaction = customer_satisfaction.get("score", 0)
+
+    impact = business_impact.get("level", "Unknown")
+
+    confidence_score = confidence.get("score", 0)
+
+    positive = sentiment.get("positive", 0)
+    neutral = sentiment.get("neutral", 0)
+    negative = sentiment.get("negative", 0)
+
+    # ==========================================================
+    # Priority Counts
+    # ==========================================================
 
     high = sum(
-        1 for p in priorities
+        1
+        for p in priorities
         if isinstance(p, dict)
         and p.get("priority", "").lower() == "high"
     )
 
     medium = sum(
-        1 for p in priorities
+        1
+        for p in priorities
         if isinstance(p, dict)
         and p.get("priority", "").lower() == "medium"
     )
 
     low = sum(
-        1 for p in priorities
+        1
+        for p in priorities
         if isinstance(p, dict)
         and p.get("priority", "").lower() == "low"
     )
 
-    if not sentiment_df.empty:
-
-        positive = len(
-            sentiment_df[
-                sentiment_df["sentiment"] == "Positive"
-            ]
-        )
-
-        neutral = len(
-            sentiment_df[
-                sentiment_df["sentiment"] == "Neutral"
-            ]
-        )
-
-        negative = len(
-            sentiment_df[
-                sentiment_df["sentiment"] == "Negative"
-            ]
-        )
-
-    else:
-
-        positive = neutral = negative = 0
-
-    total_sentiment = positive + neutral + negative
-
-    sentiment_score = (
-        round(positive / total_sentiment * 100)
-        if total_sentiment else 0
-    )
-
-    health_score = max(
-        0,
-        100
-        - high * 15
-        - medium * 7
-        - low * 3
-    )
-
-    if health_score >= 85:
-        health_status = "Excellent"
-    elif health_score >= 70:
-        health_status = "Healthy"
-    elif health_score >= 55:
-        health_status = "Needs Attention"
-    else:
-        health_status = "Critical"
-
-    business_impact = (
-        "High"
-        if high >= 3
-        else "Medium"
-        if high >= 1
-        else "Low"
-    )
-
-    confidence = 100
-
-    if len(category_df) < 3:
-        confidence -= 10
-
-    if total_sentiment < 20:
-        confidence -= 15
-
-    confidence = max(confidence, 60)
-
-    if confidence >= 90:
-        confidence_label = "Very High"
-    elif confidence >= 80:
-        confidence_label = "High"
-    elif confidence >= 70:
-        confidence_label = "Moderate"
-    else:
-        confidence_label = "Low"
-
-    # =====================================================
-    # KPI Card Helper
-    # =====================================================
-
-    def executive_card(title, value, subtitle):
-
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-title">{title}</div>
-            <div class="kpi-number">{value}</div>
-            <div class="kpi-subtitle">{subtitle}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # =====================================================
+    # ==========================================================
     # Dashboard Header
-    # =====================================================
+    # ==========================================================
 
-    st.title("Product Intelligence AI")
+    st.title("Customer Intelligence Dashboard")
 
     st.caption(
-        "Executive analytics platform for customer feedback, product strategy, and roadmap planning."
+        "Executive Product Intelligence generated from customer feedback."
     )
 
-    # =====================================================
-    # Navigation
-    # =====================================================
+    # ==========================================================
+    # KPI Cards
+    # ==========================================================
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.metric(
+            "Product Health",
+            f"{health_score}/100",
+            health_status
+        )
+
+    with c2:
+        st.metric(
+            "Customer Satisfaction",
+            f"{satisfaction}%",
+            ""
+        )
+
+    with c3:
+        st.metric(
+            "Business Impact",
+            impact,
+            ""
+        )
+
+    with c4:
+        st.metric(
+            "AI Confidence",
+            f"{confidence_score}%",
+            ""
+        )
+
+    st.divider()
+
+    # ==========================================================
+    # Dashboard Tabs
+    # ==========================================================
 
     executive_tab, analytics_tab, roadmap_tab, ai_tab = st.tabs([
         "Executive",
@@ -207,106 +216,164 @@ def show_customer_dashboard(results):
         "Roadmap",
         "AI Insights"
     ])
-    executive_tab, analytics_tab, roadmap_tab, ai_tab = st.tabs([
-    "Executive",
-    "Analytics",
-    "Roadmap",
-    "AI Insights"
-    ])
-        # =====================================================
-    # Executive Overview
-    # =====================================================
+    # ==========================================================
+    # EXECUTIVE TAB
+    # ==========================================================
 
-    st.subheader("Executive Overview")
+    with executive_tab:
 
-    overview_left, overview_right = st.columns([3, 1])
+        st.subheader("Executive Summary")
 
-    top_issue = (
-        priorities[0].get("issue")
-        if priorities
-        else "No major issues identified."
-    )
+        left, right = st.columns([3, 1])
 
-    top_theme = (
-        category_df.sort_values(
-            "count",
-            ascending=False
-        ).iloc[0]["category"]
-        if not category_df.empty
-        else "No themes identified."
-    )
+        with left:
 
-    with overview_left:
+            with st.container(border=True):
 
-        with st.container(border=True):
+                st.markdown("### Overall Assessment")
 
-            st.markdown(f"""
-## Executive Assessment
+                st.write(executive_summary)
 
-### Current Product Status
+        with right:
 
-**Product Health:** **{health_status}**
+            st.metric(
+                "Health Score",
+                f"{health_score}/100"
+            )
 
-**Customer Satisfaction:** **{sentiment_score}% Positive**
+            st.metric(
+                "Customer Satisfaction",
+                f"{satisfaction}%"
+            )
 
-**Business Impact:** **{business_impact}**
+            st.metric(
+                "High Priority Issues",
+                high
+            )
 
----
+            st.metric(
+                "AI Confidence",
+                f"{confidence_score}%"
+            )
 
-### Key Findings
+        st.divider()
 
-- Highest Priority Issue: **{top_issue}**
+        # ======================================================
+        # Product Health
+        # ======================================================
 
-- Most Discussed Theme: **{top_theme}**
+        st.subheader("Product Health")
 
-- High Priority Initiatives: **{high}**
+        col1, col2 = st.columns(2)
 
-- Product Themes Identified: **{len(category_df)}**
+        with col1:
 
----
+            with st.container(border=True):
 
-### Recommendation
+                st.markdown("### Current Status")
 
-Prioritize engineering investment toward **{top_issue.lower()}** while
-continuing to strengthen **{top_theme.lower()}**.
+                st.write(f"**Status:** {health_status}")
 
-This strategy is expected to improve customer satisfaction,
-reduce operational risk, and increase long-term product value.
+                st.progress(min(max(health_score / 100, 0), 1))
 
----
+                st.write(product_health.get(
+                    "reason",
+                    "No explanation available."
+                ))
 
-### AI Confidence
+        with col2:
 
-Confidence Score: **{confidence}% ({confidence_label})**
-""")
+            with st.container(border=True):
 
-    with overview_right:
+                st.markdown("### Business Impact")
 
-        if health_score >= 85:
-            st.success(f"Product Health\n\n{health_score}/100")
-        elif health_score >= 70:
-            st.warning(f"Product Health\n\n{health_score}/100")
+                st.write(f"**Level:** {impact}")
+
+                st.write(
+                    business_impact.get(
+                        "reason",
+                        "No explanation available."
+                    )
+                )
+
+        st.divider()
+
+        # ======================================================
+        # Customer Satisfaction
+        # ======================================================
+
+        st.subheader("Customer Satisfaction")
+
+        sat1, sat2 = st.columns([1,2])
+
+        with sat1:
+
+            st.metric(
+                "Overall Score",
+                f"{satisfaction}%"
+            )
+
+        with sat2:
+
+            st.write(
+                customer_satisfaction.get(
+                    "reason",
+                    "No explanation available."
+                )
+            )
+
+        st.divider()
+
+        # ======================================================
+        # Executive Scorecard
+        # ======================================================
+
+        st.subheader("Executive Scorecard")
+
+        if scorecard:
+
+            scorecard_df = pd.DataFrame(scorecard)
+
+            st.dataframe(
+                scorecard_df,
+                use_container_width=True,
+                hide_index=True
+            )
+
         else:
-            st.error(f"Product Health\n\n{health_score}/100")
 
-        if sentiment_score >= 75:
-            st.success(f"Customer Satisfaction\n\n{sentiment_score}%")
-        elif sentiment_score >= 50:
-            st.warning(f"Customer Satisfaction\n\n{sentiment_score}%")
-        else:
-            st.error(f"Customer Satisfaction\n\n{sentiment_score}%")
+            st.info("No executive scorecard available.")
 
-        if high >= 3:
-            st.error(f"High Priority Issues\n\n{high}")
-        else:
-            st.success(f"High Priority Issues\n\n{high}")
+        st.divider()
 
-        st.info(f"AI Confidence\n\n{confidence}%")
+        # ======================================================
+        # Priority Overview
+        # ======================================================
 
-    st.divider()
-    # =====================================================
-    # Analytics
-    # =====================================================
+        st.subheader("Priority Summary")
+
+        p1, p2, p3 = st.columns(3)
+
+        with p1:
+            st.metric(
+                "High",
+                high
+            )
+
+        with p2:
+            st.metric(
+                "Medium",
+                medium
+            )
+
+        with p3:
+            st.metric(
+                "Low",
+                low
+            )
+    # ==========================================================
+    # ANALYTICS TAB
+    # ==========================================================
 
     with analytics_tab:
 
@@ -314,668 +381,419 @@ Confidence Score: **{confidence}% ({confidence_label})**
 
         left, right = st.columns([2, 1])
 
-    # ============================================
-    # Product Themes
-    # ============================================
+        # ======================================================
+        # Theme Frequency
+        # ======================================================
 
-    with left:
+        with left:
 
-        st.markdown("##### Product Themes")
+            st.markdown("### Product Themes")
 
-        if not category_df.empty:
+            if not theme_df.empty:
 
-            category_df = category_df.sort_values(
-                "count",
-                ascending=True
-            )
-
-            fig = px.bar(
-                category_df,
-                x="count",
-                y="category",
-                orientation="h",
-                text="count"
-            )
-
-            fig.update_layout(
-
-                height=500,
-
-                xaxis_title="Customer Mentions",
-
-                yaxis_title="",
-
-                margin=dict(
-                    l=10,
-                    r=10,
-                    t=10,
-                    b=10
-                ),
-
-                coloraxis_showscale=False,
-
-                template="plotly_white"
-            )
-
-            fig.update_traces(
-                textposition="outside"
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
-
-        else:
-
-            st.info("No product themes were identified.")
-
-    # ============================================
-    # Sentiment Breakdown
-    # ============================================
-
-    with right:
-
-        st.markdown("##### Sentiment Distribution")
-
-        if total_sentiment:
-
-            sentiment_summary = pd.DataFrame({
-
-                "Sentiment": [
-                    "Positive",
-                    "Neutral",
-                    "Negative"
-                ],
-
-                "Count": [
-                    positive,
-                    neutral,
-                    negative
-                ]
-
-            })
-
-            fig = px.pie(
-
-                sentiment_summary,
-
-                names="Sentiment",
-
-                values="Count",
-
-                hole=.60
-
-            )
-
-            fig.update_layout(
-
-                height=500,
-
-                margin=dict(
-                    l=0,
-                    r=0,
-                    t=0,
-                    b=0
+                chart_df = theme_df.sort_values(
+                    "Mentions",
+                    ascending=True
                 )
 
-            )
+                fig = px.bar(
+                    chart_df,
+                    x="Mentions",
+                    y="Theme",
+                    orientation="h",
+                    text="Mentions",
+                    template="plotly_white"
+                )
 
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
+                fig.update_layout(
+                    height=500,
+                    xaxis_title="Customer Mentions",
+                    yaxis_title="",
+                    margin=dict(
+                        l=10,
+                        r=10,
+                        t=10,
+                        b=10
+                    )
+                )
+
+                fig.update_traces(
+                    textposition="outside"
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info("No themes were identified.")
+
+        # ======================================================
+        # Sentiment Breakdown
+        # ======================================================
+
+        with right:
+
+            st.markdown("### Sentiment")
+
+            total = positive + neutral + negative
+
+            if total > 0:
+
+                sentiment_df = pd.DataFrame({
+
+                    "Sentiment": [
+                        "Positive",
+                        "Neutral",
+                        "Negative"
+                    ],
+
+                    "Count": [
+                        positive,
+                        neutral,
+                        negative
+                    ]
+
+                })
+
+                fig = px.pie(
+
+                    sentiment_df,
+
+                    names="Sentiment",
+
+                    values="Count",
+
+                    hole=.65,
+
+                    template="plotly_white"
+
+                )
+
+                fig.update_layout(
+
+                    height=450,
+
+                    margin=dict(
+                        l=0,
+                        r=0,
+                        t=0,
+                        b=0
+                    )
+
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info("No sentiment analysis available.")
+
+        st.divider()
+
+        # ======================================================
+        # Theme Breakdown
+        # ======================================================
+
+        st.subheader("Theme Breakdown")
+
+        if themes:
+
+            for theme in themes:
+
+                with st.container(border=True):
+
+                    st.markdown(
+                        f"### {theme.get('theme','Unknown Theme')}"
+                    )
+
+                    c1, c2 = st.columns([1,4])
+
+                    with c1:
+
+                        st.metric(
+                            "Mentions",
+                            theme.get("mentions",0)
+                        )
+
+                    with c2:
+
+                        st.write(
+                            theme.get(
+                                "summary",
+                                "No summary available."
+                            )
+                        )
+
+                        evidence = theme.get(
+                            "evidence",
+                            []
+                        )
+
+                        if evidence:
+
+                            st.markdown("**Supporting Evidence**")
+
+                            for item in evidence:
+
+                                st.markdown(
+                                    f"- {item}"
+                                )
 
         else:
 
-            st.info("No sentiment analysis available.")
+            st.info("No themes available.")
 
-    st.divider()
+        st.divider()
 
-    # ============================================
-    # Product Themes Table
-    # ============================================
+        # ======================================================
+        # Priority Distribution
+        # ======================================================
 
-    st.subheader("Product Theme Breakdown")
+        st.subheader("Priority Distribution")
 
-    if not category_df.empty:
+        priority_df = pd.DataFrame({
 
-        display_df = category_df.copy()
+            "Priority":[
+                "High",
+                "Medium",
+                "Low"
+            ],
 
-        display_df.columns = [
-            "Theme",
-            "Mentions"
-        ]
+            "Count":[
+                high,
+                medium,
+                low
+            ]
 
-        display_df = display_df.sort_values(
-            "Mentions",
-            ascending=False
+        })
+
+        fig = px.bar(
+
+            priority_df,
+
+            x="Priority",
+
+            y="Count",
+
+            text="Count",
+
+            template="plotly_white"
+
         )
 
-        st.dataframe(
+        fig.update_layout(
 
-            display_df,
+            height=400,
 
-            use_container_width=True,
+            xaxis_title="",
 
-            hide_index=True
+            yaxis_title="Issues"
 
         )
 
-    else:
-
-        st.info("No product themes available.")
-
-    st.divider()
-
-    # ============================================
-    # Priority Distribution
-    # ============================================
-
-    st.subheader("Priority Distribution")
-
-    priority_df = pd.DataFrame({
-
-        "Priority": [
-            "High",
-            "Medium",
-            "Low"
-        ],
-
-        "Count": [
-            high,
-            medium,
-            low
-        ]
-
-    })
-
-    fig = px.bar(
-
-        priority_df,
-
-        x="Priority",
-
-        y="Count",
-
-        text="Count"
-
-    )
-
-    fig.update_layout(
-
-        height=400,
-
-        xaxis_title="",
-
-        yaxis_title="Number of Issues",
-
-        margin=dict(
-            l=10,
-            r=10,
-            t=10,
-            b=10
+        st.plotly_chart(
+            fig,
+            use_container_width=True
         )
-
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-    st.divider()
-
-    # ============================================
-    # Analytics Summary
-    # ============================================
-
-    st.subheader("Analytics Summary")
-
-    analytics_summary = pd.DataFrame([
-
-        {
-            "Metric": "Themes Identified",
-            "Value": len(category_df)
-        },
-
-        {
-            "Metric": "High Priority Issues",
-            "Value": high
-        },
-
-        {
-            "Metric": "Positive Sentiment",
-            "Value": f"{sentiment_score}%"
-        },
-
-        {
-            "Metric": "AI Confidence",
-            "Value": f"{confidence}%"
-        }
-
-    ])
-
-    st.dataframe(
-
-        analytics_summary,
-
-        hide_index=True,
-
-        use_container_width=True
-
-    )
-    # =====================================================
-    # Roadmap
-    # =====================================================
+    # ==========================================================
+    # ROADMAP TAB
+    # ==========================================================
 
     with roadmap_tab:
 
         st.subheader("Product Roadmap")
 
-    # =============================================
-    # Executive Roadmap
-    # =============================================
+        if roadmap:
 
-    roadmap_items = []
+            if isinstance(roadmap, dict):
+                roadmap = roadmap.get("roadmap", [])
 
-    for item in priorities:
+            roadmap_df = pd.DataFrame(roadmap)
 
-        if not isinstance(item, dict):
-            continue
-
-        issue = item.get("issue", "Unknown")
-        priority = item.get("priority", "Medium").lower()
-
-        if priority == "high":
-
-            release = "Immediate"
-
-            investment = "High"
-
-            owner = "Engineering"
-
-        elif priority == "medium":
-
-            release = "Next Release"
-
-            investment = "Medium"
-
-            owner = "Product"
+            st.dataframe(
+                roadmap_df,
+                use_container_width=True,
+                hide_index=True
+            )
 
         else:
 
-            release = "Future"
+            st.info("No roadmap recommendations were generated.")
 
-            investment = "Low"
+        st.divider()
 
-            owner = "Strategy"
+        # ======================================================
+        # Priority Initiatives
+        # ======================================================
 
-        roadmap_items.append({
+        st.subheader("Priority Initiatives")
 
-            "Initiative": issue,
+        if priorities:
 
-            "Priority": priority.title(),
+            for item in priorities:
 
-            "Target Release": release,
+                with st.container(border=True):
 
-            "Investment": investment,
+                    left, right = st.columns([4,1])
 
-            "Owner": owner
+                    with left:
 
-        })
+                        st.markdown(
+                            f"### {item.get('issue','Unknown Issue')}"
+                        )
 
-    if roadmap_items:
+                        st.write(
+                            item.get(
+                                "reason",
+                                "Customer-driven initiative."
+                            )
+                        )
 
-        roadmap_df = pd.DataFrame(roadmap_items)
+                    with right:
 
-        st.dataframe(
+                        st.metric(
+                            "Priority",
+                            item.get(
+                                "priority",
+                                "Medium"
+                            )
+                        )
 
-            roadmap_df,
+        else:
 
-            hide_index=True,
+            st.info("No initiatives identified.")
 
-            use_container_width=True
+        st.divider()
 
-        )
+        # ======================================================
+        # Investment Summary
+        # ======================================================
 
-    else:
+        st.subheader("Investment Portfolio")
 
-        st.info("No roadmap recommendations available.")
+        c1, c2, c3 = st.columns(3)
 
-    st.divider()
+        c1.metric("Immediate", high)
+        c2.metric("Next Release", medium)
+        c3.metric("Future", low)
 
-    # =============================================
-    # Executive Investment Portfolio
-    # =============================================
-
-    st.subheader("Investment Portfolio")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        st.metric(
-
-            "Immediate",
-
-            high
-
-        )
-
-    with c2:
-
-        st.metric(
-
-            "Next Release",
-
-            medium
-
-        )
-
-    with c3:
-
-        st.metric(
-
-            "Future",
-
-            low
-
-        )
-
-    st.divider()
-
-    # =============================================
-    # Priority Cards
-    # =============================================
-
-    st.subheader("Recommended Initiatives")
-
-    if priorities:
-
-        for item in priorities:
-
-            issue = item.get("issue", "Unknown")
-
-            priority = item.get("priority", "Medium")
-
-            with st.container(border=True):
-
-                left, right = st.columns([3,1])
-
-                with left:
-
-                    st.markdown(f"### {issue}")
-
-                    st.write(f"""
-    Priority Level: **{priority}**
-
-    This initiative was identified by AI as a customer-driven opportunity.
-
-    Expected outcome includes improved customer satisfaction,
-    reduced support effort, and stronger product adoption.
-    """)
-
-                with right:
-
-                    st.metric(
-                        "Priority",
-                        priority
-                    )
-
-                    st.metric(
-                        "ROI",
-                        "High" if priority.lower()=="high" else "Medium"
-                    )
-
-    else:
-
-        st.info("No initiatives identified.")
-
-    st.divider()
-
-    # =============================================
-    # AI Generated Jira Stories
-    # =============================================
-
-    st.subheader("Suggested Jira Stories")
-
-    jira_rows = []
-
-    for item in priorities:
-
-        if not isinstance(item, dict):
-            continue
-
-        issue = item.get("issue","Unknown")
-
-        jira_rows.append({
-
-            "Epic":"Customer Experience",
-
-            "Story":f"Improve {issue.lower()}",
-
-            "Priority":item.get("priority","Medium"),
-
-            "Status":"Proposed"
-
-        })
-
-    if jira_rows:
-
-        jira_df = pd.DataFrame(jira_rows)
-
-        st.dataframe(
-
-            jira_df,
-
-            use_container_width=True,
-
-            hide_index=True
-
-        )
-
-    else:
-
-        st.info("No Jira stories generated.")
-
-    st.divider()
-
-    # =============================================
-    # Executive Recommendation
-    # =============================================
-
-    st.subheader("Portfolio Recommendation")
-
-    with st.container(border=True):
-
-        st.write("""
-
-### Recommended Investment Strategy
-
-Allocate engineering resources toward high-priority customer issues before investing in new functionality.
-
-Once critical issues have been addressed, shift investment toward usability improvements and long-term innovation.
-
-This approach balances customer satisfaction, engineering capacity, and strategic growth while maximizing product value.
-
-""")
-    # =====================================================
-    # AI Insights
-    # =====================================================
+    # ==========================================================
+    # AI INSIGHTS TAB
+    # ==========================================================
 
     with ai_tab:
 
-        st.subheader("Executive AI Report")
+        st.subheader("AI Recommendations")
 
-        with st.container(border=True):
+        if recommendations:
 
-            st.markdown(f"""
+            for i, recommendation in enumerate(recommendations, start=1):
 
-### Executive Summary
+                with st.container(border=True):
 
-{executive_summary}
+                    st.markdown(
+                        f"### Recommendation {i}"
+                    )
 
----
+                    st.write(recommendation)
 
-### Overall Assessment
+        else:
 
-The uploaded customer feedback indicates an overall product health score of **{health_score}/100**.
+            st.info("No recommendations generated.")
 
-The AI identified **{len(category_df)} primary product themes**, **{high} high-priority customer issues**, and an estimated customer satisfaction score of **{sentiment_score}%**.
+        st.divider()
 
-Business impact is currently assessed as **{business_impact}**, with an AI confidence score of **{confidence}% ({confidence_label})**.
+        # ======================================================
+        # Jira Stories
+        # ======================================================
 
-The strongest recommendation is to resolve **{top_issue.lower()}** before expanding feature development.
+        st.subheader("Suggested Jira Stories")
 
-""")
+        if jira_stories:
 
-    st.divider()
+            jira_df = pd.DataFrame(jira_stories)
 
-    # ===============================================
-    # AI Recommendations
-    # ===============================================
+            st.dataframe(
+                jira_df,
+                use_container_width=True,
+                hide_index=True
+            )
 
-    st.subheader("Recommended Actions")
+        else:
 
-    recommendations = []
+            st.info("No Jira stories available.")
 
-    if high > 0:
+        st.divider()
 
-        recommendations.append(
-            "Prioritize engineering resources toward high-priority customer issues."
-        )
+        # ======================================================
+        # Executive Report
+        # ======================================================
 
-    if sentiment_score < 75:
+        st.subheader("Executive Report")
 
-        recommendations.append(
-            "Improve customer satisfaction through targeted usability improvements."
-        )
-
-    if len(category_df):
-
-        recommendations.append(
-            "Continue monitoring recurring product themes after each release."
-        )
-
-    recommendations.append(
-        "Use customer feedback as a roadmap input for future planning."
-    )
-
-    for i, recommendation in enumerate(recommendations, start=1):
-
-        with st.container(border=True):
-
-            st.markdown(f"### Recommendation {i}")
-
-            st.write(recommendation)
-
-    st.divider()
-
-    # ===============================================
-    # Executive Scorecard
-    # ===============================================
-
-    st.subheader("Executive Scorecard")
-
-    scorecard = pd.DataFrame([
-        {
-            "Metric": "Product Health",
-            "Score": f"{health_score}/100"
-        },
-        {
-            "Metric": "Customer Satisfaction",
-            "Score": f"{sentiment_score}%"
-        },
-        {
-            "Metric": "Business Impact",
-            "Score": business_impact
-        },
-        {
-            "Metric": "High Priority Issues",
-            "Score": high
-        },
-        {
-            "Metric": "AI Confidence",
-            "Score": f"{confidence}%"
-        }
-    ])
-
-    st.dataframe(
-        scorecard,
-        hide_index=True,
-        use_container_width=True
-    )
-
-    st.divider()
-
-    # ===============================================
-    # Product Copilot
-    # ===============================================
-
-    st.subheader("AI Product Copilot")
-
-    user_question = st.text_input(
-        "Ask a question about the analysis"
-    )
-
-    if user_question:
-
-        st.info(
-            "Connect this input to your Llama/Groq endpoint to provide conversational answers based on the uploaded analysis."
-        )
-
-    st.divider()
-
-    # ===============================================
-    # Executive Report
-    # ===============================================
-
-    st.subheader("Executive Report")
-
-    report = f"""
+        report = f"""
 PRODUCT INTELLIGENCE AI
+
+======================================
 
 Executive Summary
 
-Product Health: {health_score}/100
+{executive_summary}
 
-Customer Satisfaction: {sentiment_score}%
+======================================
 
-Business Impact: {business_impact}
+Product Health:
+{health_score}/100 ({health_status})
 
-High Priority Issues: {high}
+Customer Satisfaction:
+{satisfaction}%
 
-AI Confidence: {confidence}%
+Business Impact:
+{impact}
 
-Key Recommendation:
+AI Confidence:
+{confidence_score}%
 
-Focus engineering investment on resolving
-{top_issue} while continuing to improve
-{top_theme}.
+======================================
 
-Expected Outcome:
+Priority Breakdown
 
-• Higher customer satisfaction
+High: {high}
+Medium: {medium}
+Low: {low}
 
-• Better product quality
+======================================
 
-• Reduced operational risk
-
-• Stronger roadmap prioritization
-
-• Improved executive decision making
+Top Product Themes
 
 """
 
-    st.download_button(
+        if not theme_df.empty:
 
-        "Download Executive Report",
+            for _, row in theme_df.sort_values(
+                "Mentions",
+                ascending=False
+            ).iterrows():
 
-        report,
+                report += f"- {row['Theme']} ({row['Mentions']} mentions)\n"
 
-        file_name="executive_report.txt",
+        report += """
 
-        mime="text/plain"
+======================================
 
-    )
+Recommended Next Step
+
+Prioritize the highest-impact customer issues
+while maintaining investment in the most
+requested product capabilities.
+
+======================================
+"""
+
+        st.code(report, language="text")

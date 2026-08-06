@@ -4,35 +4,35 @@ from llm import competitive_analysis
 
 def run_customer_analysis(feedback_list):
     """
-    Customer feedback only.
+    Runs customer feedback analysis using AI.
+    All insights returned come directly from the LLM.
     """
-    return run_workflow(feedback_list, "")
+    return run_workflow(
+        feedback_list=feedback_list,
+        competitor_text=""
+    )
 
 
 def run_competitive_analysis(competitor_text):
     """
-    Competitive analysis only.
+    Runs competitive analysis using AI.
+    Returns the AI response without generating
+    additional summaries or placeholder content.
     """
 
-    analysis = competitive_analysis([], competitor_text)
-
-    return {
-        "executive_summary": analysis.get(
-            "executive_summary",
-            "No executive summary available."
-        ),
-        "themes": [],
-        "categories": [],
-        "priorities": [],
-        "sentiment": {},
-        "roadmap": [],
-        "jira_stories": [],
-        "competitive_analysis": analysis
-    }
+    return competitive_analysis(
+        feedback_list=[],
+        competitor_text=competitor_text
+    )
 
 
 def run_combined_analysis(feedback_list, competitor_text):
     """
-    Customer feedback + competitor analysis.
+    Runs combined customer + competitive analysis.
+    All dashboard content should originate from AI.
     """
-    return run_workflow(feedback_list, competitor_text)
+
+    return run_workflow(
+        feedback_list=feedback_list,
+        competitor_text=competitor_text
+    )

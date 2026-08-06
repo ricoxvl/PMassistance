@@ -1,35 +1,43 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 def show_sentiment(results):
 
-    sentiments = results["sentiment"]["sentiments"]
+    sentiment = results.get("sentiment", {})
 
-    sentiment_df = pd.DataFrame(sentiments)
+    positive = sentiment.get("positive", 0)
+    neutral = sentiment.get("neutral", 0)
+    negative = sentiment.get("negative", 0)
 
-    st.header(" Customer Sentiment")
+    overall = sentiment.get("overall_sentiment", "Unknown")
+    reason = sentiment.get("reason", "")
 
-    st.dataframe(
+    st.header("Customer Sentiment")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Positive", positive)
+    col2.metric("Neutral", neutral)
+    col3.metric("Negative", negative)
+
+    st.write(f"**Overall Sentiment:** {overall}")
+
+    if reason:
+        st.info(reason)
+
+    sentiment_df = pd.DataFrame({
+        "Sentiment": ["Positive", "Neutral", "Negative"],
+        "Count": [positive, neutral, negative]
+    })
+
+    fig = px.pie(
         sentiment_df,
-        use_container_width=True
+        names="Sentiment",
+        values="Count",
+        hole=0.55,
+        title="Customer Sentiment Distribution"
     )
 
-    counts = sentiment_df["sentiment"].value_counts()
-
-    st.subheader("Sentiment Distribution")
-
-    st.bar_chart(counts)
-
-    fig, ax = plt.subplots()
-
-    ax.pie(
-        counts.values,
-        labels=counts.index,
-        autopct="%1.1f%%"
-    )
-
-    ax.set_title("Customer Sentiment")
-
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)

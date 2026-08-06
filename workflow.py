@@ -1,139 +1,84 @@
 from llm import (
-    summarize_feedback,
-    cluster_feedback,
-    prioritize_feedback,
-    generate_roadmap,
-    analyze_sentiment,
-    competitive_analysis,
-    executive_summary,
-    generate_jira_stories
+    customer_intelligence,
+    competitive_analysis
 )
 
 
-def run_workflow(
-    feedback_list,
-    competitor_text=""
-):
+def run_workflow(feedback_list, competitor_text=""):
 
     # ---------------------------------
-    # Step 1 - Summarize Feedback
+    # Customer Intelligence
     # ---------------------------------
 
-    summary = summarize_feedback(feedback_list)
-
-    if not summary or "summaries" not in summary:
-        raise ValueError("Step 1 failed: Invalid summaries returned.")
-
-    # ---------------------------------
-    # Step 2 - Cluster Feedback
-    # ---------------------------------
-
-    categories = cluster_feedback(summary)
-
-    if not categories or "categories" not in categories:
-        raise ValueError("Step 2 failed: Invalid categories returned.")
-
-    # ---------------------------------
-    # Step 3 - Prioritize
-    # ---------------------------------
-
-    priorities = prioritize_feedback(categories)
+    customer = customer_intelligence(feedback_list)
 
     if (
-        not isinstance(priorities, dict)
-        or "priorities" not in priorities
-        or not isinstance(priorities["priorities"], list)
+        not isinstance(customer, dict)
+        or "executive_summary" not in customer
     ):
         raise ValueError(
-            f"Step 3 failed: Invalid priorities returned.\nReturned: {priorities}"
+            "Customer intelligence analysis failed."
         )
 
     # ---------------------------------
-    # Step 4 - Product Roadmap
+    # Competitive Intelligence
     # ---------------------------------
-
-    roadmap = generate_roadmap(priorities)
-
-    if not roadmap or "roadmap" not in roadmap:
-        raise ValueError("Step 4 failed: Invalid roadmap returned.")
-
-    # ---------------------------------
-    # Step 5 - Sentiment Analysis
-    # ---------------------------------
-
-    sentiment = analyze_sentiment(feedback_list)
-
-    if not sentiment or "sentiments" not in sentiment:
-        raise ValueError("Step 5 failed: Invalid sentiment analysis returned.")
-
-    # ---------------------------------
-    # Step 6 - Competitive Analysis
-    # ---------------------------------
-
-    # Limit the amount of customer feedback sent to the AI
-    feedback_sample = feedback_list[:50]
-
-    # Limit competitor document size
-    competitor_summary = competitor_text[:6000]
 
     competitive = competitive_analysis(
-        feedback_sample,
-        competitor_summary
-)
-    print("=" * 60)
-    print("COMPETITIVE ANALYSIS RESULT")
-    print(competitive)
-    print("=" * 60)
-
-    required_keys = [
-        "competitor_strengths",
-        "competitor_weaknesses",
-        "customer_requested_features",
-        "competitive_gaps",
-        "recommended_features",
-        "strategic_recommendations",
-    ]
+        feedback_list,
+        competitor_text
+    )
 
     if (
         not isinstance(competitive, dict)
-        or not all(key in competitive for key in required_keys)
+        or "executive_summary" not in competitive
     ):
         raise ValueError(
-            f"Step 6 failed: Invalid competitive analysis returned.\nReturned: {competitive}"
+            "Competitive intelligence analysis failed."
         )
 
     # ---------------------------------
-    # Step 7 - Executive Summary
-    # ---------------------------------
-
-    executive = executive_summary(
-        roadmap,
-        competitive
-    )
-
-    if not executive:
-        raise ValueError("Step 7 failed: Executive summary generation failed.")
-
-    # ---------------------------------
-    # Step 8 - Jira Stories
-    # ---------------------------------
-
-    stories = generate_jira_stories(priorities)
-
-    if not stories or "stories" not in stories:
-        raise ValueError("Step 8 failed: Invalid Jira stories returned.")
-
-    # ---------------------------------
-    # Return Everything
+    # Combined Result
     # ---------------------------------
 
     return {
-        "summary": summary,
-        "categories": categories,
-        "priorities": priorities,
-        "roadmap": roadmap,
-        "sentiment": sentiment,
-        "competitive_analysis": competitive,
-        "executive_summary": executive,
-        "stories": stories,
+
+        "executive_summary":
+            customer.get("executive_summary", ""),
+
+        "product_health":
+            customer.get("product_health", {}),
+
+        "customer_satisfaction":
+            customer.get("customer_satisfaction", {}),
+
+        "confidence":
+            customer.get("confidence", {}),
+
+        "business_impact":
+            customer.get("business_impact", {}),
+
+        "themes":
+            customer.get("themes", []),
+
+        "sentiment":
+            customer.get("sentiment", {}),
+
+        "priorities":
+            customer.get("priorities", []),
+
+        "roadmap":
+            customer.get("roadmap", []),
+
+        "recommendations":
+            customer.get("recommendations", []),
+
+        "jira_stories":
+            customer.get("jira_stories", []),
+
+        "scorecard":
+            customer.get("scorecard", []),
+
+        "competitive_analysis":
+            competitive
     }

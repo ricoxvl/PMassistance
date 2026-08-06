@@ -1,30 +1,39 @@
 import streamlit as st
+import pandas as pd
 
 
 def show_jira(results):
 
-    stories = results["stories"]["stories"]
+    stories = results.get("jira_stories", [])
 
-    st.header("🎫 AI Generated Jira Stories")
+    st.header("Generated Jira Stories")
 
-    for story_index, story in enumerate(stories):
+    if not stories:
+        st.info("No Jira stories were generated.")
+        return
 
-        with st.expander(
-            f'{story["id"]} - {story["title"]}',
-            expanded=True
-        ):
+    for story in stories:
 
-            st.write(f'**Priority:** {story["priority"]}')
+        with st.container(border=True):
 
-            st.write("### Description")
-            st.write(story["description"])
+            st.subheader(
+                f"{story.get('id', 'N/A')} - {story.get('title', 'Untitled')}"
+            )
 
-            st.write("### Acceptance Criteria")
+            col1, col2 = st.columns(2)
 
-            for item_index, item in enumerate(story["acceptance"]):
+            with col1:
+                st.metric("Priority", story.get("priority", "N/A"))
 
-                st.checkbox(
-                    item,
-                    value=False,
-                    key=f"story_{story_index}_item_{item_index}"
-                )
+            with col2:
+                st.metric("Status", "Proposed")
+
+            st.markdown("**Description**")
+            st.write(story.get("description", ""))
+
+            acceptance = story.get("acceptance", [])
+
+            if acceptance:
+                st.markdown("**Acceptance Criteria**")
+                for item in acceptance:
+                    st.markdown(f"- {item}")
